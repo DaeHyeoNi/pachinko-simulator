@@ -5,8 +5,17 @@ const reelTiming = {
   normalStop: 13.6, luckyRun: 5.6, hold: 3.5
 };
 
+const shortTiming = {leftStop:1.7, rightStop:2.5, normalStop:3.65, hold:.85};
+const normalReachTiming = {leftStop:2.7, rightStop:4.2, normalStop:8.4, hold:1.25};
+
+function drawTiming(ticket) {
+  if (ticket.stage === 'short') return shortTiming;
+  if (ticket.stage === 'reach') return normalReachTiming;
+  return reelTiming;
+}
+
 function reelStopTime(ticket) {
-  if (!ticket.lucky) return reelTiming.normalStop;
+  if (!ticket.lucky) return drawTiming(ticket).normalStop;
   return ticket.pushTime == null
     ? reelTiming.pushDeadline + 2.7
     : ticket.pushTime + reelTiming.luckyRun;
@@ -19,7 +28,7 @@ function chanceIsReady(ticket) {
 
 function isReachLive(ticket) {
   return Boolean(ticket && ticket.digits[0] === ticket.digits[2] &&
-    ticket.elapsed >= reelTiming.rightStop && ticket.elapsed < reelStopTime(ticket));
+    ticket.elapsed >= drawTiming(ticket).rightStop && ticket.elapsed < reelStopTime(ticket));
 }
 
 function reelEase(value) {
@@ -31,10 +40,11 @@ function reelEase(value) {
 // finishing strike even when the player chooses a different moment to PUSH.
 function battleCameraTime(ticket) {
   const t = ticket.elapsed, finish = reelStopTime(ticket);
-  if (t < reelTiming.rightStop) return t / reelTiming.rightStop * 3.68;
+  const entry = reelTiming.leftStop;
+  if (t < reelTiming.rightStop) return Math.max(0,(t-entry)/(reelTiming.rightStop-entry))*1.7;
   const launch = ticket.lucky ? ticket.pushTime ?? reelTiming.pushDeadline : reelTiming.rightStop;
-  if (t < launch) return 3.68 + (t - reelTiming.rightStop) * .15;
-  const launchFrame = 3.68 + (launch - reelTiming.rightStop) * .15;
+  if (t < launch) return 1.7 + (t - reelTiming.rightStop) * .36;
+  const launchFrame = 1.7 + (launch - reelTiming.rightStop) * .36;
   if (t < finish) return launchFrame + (5.83 - launchFrame) * (t - launch) / (finish - launch);
   return Math.min(6.395, 5.83 + (t - finish) * .55);
 }
@@ -55,7 +65,8 @@ function symbolRibbon(c, label, y, size, color, alpha=1) {
 
 function drawSpinningSymbol(c, ticket, index, x, y, size, finish) {
   const t = ticket.elapsed, digit = ticket.digits[index];
-  const stop = [reelTiming.leftStop,finish,reelTiming.rightStop][index];
+  const timing=drawTiming(ticket);
+  const stop = [timing.leftStop,finish,timing.rightStop][index];
   const remaining = Math.max(0,stop-t), age = t-stop;
   const pop = age >= 0 && age < .36 ? 1+.13*Math.sin(Math.PI*age/.36) : 1;
   c.save();
@@ -95,15 +106,33 @@ function drawSpinningSymbol(c, ticket, index, x, y, size, finish) {
 function drawReelReveal(c,ticket,retained=false) {
   const t=ticket.elapsed, finish=reelStopTime(ticket);
   c.save();
-  drawBattle(c,battleCameraTime(ticket),ticket.variant,ticket.digits,ticket.won);
+  const timing=drawTiming(ticket);
+  const inBattle=timing===reelTiming && t>=timing.leftStop;
+  if (inBattle) {
+    drawBattle(c,battleCameraTime(ticket),ticket.variant,ticket.digits,ticket.won);
+    const flash=1-reelEase((t-timing.leftStop)/.36);
+    if(flash>0){c.fillStyle='rgba(218,242,255,'+flash*.72+')';c.fillRect(0,0,600,600);}
+  } else {
+    drawPatrol(c,t,ticket.patrolOffset);
+  }
+  if(!inBattle){
+    const reach = isReachLive(ticket);
+    const travel=timing===normalReachTiming ? reelEase((t-timing.rightStop)/.6)*(1-reelEase((t-finish+.8)/.8)) : 0;
+    for(let i=0;i<3;i++){
+      const distance=134+travel*40, y=i===1 ? 385-travel*32 : 385;
+      drawSpinningSymbol(c,ticket,i,300+(i-1)*distance,y,i===1 ? 112+travel*22 : 112,finish);
+    }
+    if(reach)symbolRibbon(c,'리치',145,30,'#ffdf9e',1-reelEase((t-timing.rightStop-1.3)/.7));
+    c.restore();return;
+  }
   // Side symbols travel away from the pilots during the fight, then meet the
   // final center symbol on the impact beat. Their faces never cover the LCD.
-  const spread = reelEase((t-.32)/1.34), converge = reelEase((t-(finish-1.6))/1.6);
-  const sideDistance = 105 + spread*112 - converge*82;
-  const sideY = 420 - spread*146 + converge*28;
-  const centerY = 420 - converge*118;
-  const sideSize = 72 + spread*20 + converge*66;
-  const centerSize = 72 + reelEase((t-reelTiming.rightStop)/1.2)*21 + converge*65;
+  const spread = reelEase((t-timing.leftStop)/.82), converge = reelEase((t-(finish-1.6))/1.6);
+  const sideDistance = 134 + spread*83 - converge*82;
+  const sideY = 385 - spread*111 + converge*28;
+  const centerY = 385 + spread*35 - converge*118;
+  const sideSize = 112 - spread*20 + converge*66;
+  const centerSize = 112 - spread*40 + reelEase((t-reelTiming.rightStop)/1.2)*21 + converge*65;
   drawSpinningSymbol(c,ticket,0,300-sideDistance,sideY,sideSize,finish);
   drawSpinningSymbol(c,ticket,2,300+sideDistance,sideY,sideSize,finish);
   drawSpinningSymbol(c,ticket,1,300,centerY,centerSize,finish);

@@ -3,15 +3,21 @@ const $ = id => document.getElementById(id);
 const cv = $('board'), g = cv.getContext('2d'), rand = Math.random, TAU = 2*Math.PI;
 const tray = new BallTray($('tray'));
 const cabinet = document.querySelector('.cabinet');
-const STACK_LIMIT = 5, ODDS = 319.7, ATTACKER_CAPACITY = 30;
+const STACK_LIMIT = 5, ODDS = 319.7;
+const ROUND_COUNT=3, ROUND_CAPACITY=10, ROUND_SECONDS=29.5, ROUND_GAP=1.5;
+const attacker={round:0,hits:0,inTransit:0,open:false,transitionAt:0};
 let stock=0, shots=0, hits=0, wins=0, now=0, lastShot=-1;
 let sound=false, ac, force=0, mode='empty', insertion=0, payout=0, payoutClock=0, rightHits=0;
-let warningUntil=0, warningMessage='', activeDraw=null, waiting=[], gateOpened=0;
+let warningUntil=0, warningMessage='', activeDraw=null, waiting=[];
 let balls=[];
 const field=createFieldwork();
 const pegs=field.pegs;
 const bank=new BanknoteAcceptor();
 const standby=document.createElement('canvas');
+let bonusStartedAt=0;
+function showBonusReceipt(earned){
+  drawBonusRound(standby.getContext('2d'),now-bonusStartedAt,3,0,earned,true);
+}
 standby.width=standby.height=600;
 drawBattle(standby.getContext('2d'),1.05,0,[0,0,0],false);
 // One outline drives both collisions and the molded display surround.
@@ -71,13 +77,17 @@ function drawDisplay() {
   const sceneScale=lcd.width/600;
   g.scale(sceneScale,sceneScale);g.translate(-300,-300);
   if(activeDraw) drawReelReveal(g,activeDraw);
+  else if(mode==='right'){
+    const finished=attacker.round===ROUND_COUNT && !attacker.open && !attacker.inTransit;
+    drawBonusRound(g,now-bonusStartedAt,attacker.round,attacker.hits,rightHits*15,finished);
+  }
   else g.drawImage(standby,0,0);
   g.restore();
 }
 function launchTrack(offset=0){
   const path=new Path2D();
   path.moveTo(16-offset,533);path.lineTo(16-offset,176);
-  path.ellipse(300,176,284+offset,150+offset,0,Math.PI,Math.PI+(1.42-.30)*2.65);
+  path.ellipse(300,176,284+offset,150+offset,0,Math.PI,Math.PI+transferAngle);
   return path;
 }
 const launchGroove=launchTrack(),launchGlassLip=launchTrack(5.4);
@@ -99,7 +109,7 @@ function drawChute(){
   g.lineJoin='round';g.lineCap='round';
   for(const [route,points] of Object.entries(rightTrough)) {
     if(route==='gateY')continue;
-    const active=mode==='right'&&route!=='return';
+    const active=attacker.open&&route!=='return';
     g.beginPath();
     points.forEach(([x,y,w],i)=>i?g.lineTo(x-w,y):g.moveTo(x-w,y));
     for(let i=points.length-1;i>=0;i--){const [x,y,w]=points[i];g.lineTo(x+w,y);}
@@ -129,7 +139,7 @@ function drawChute(){
 }
 function drawGates(){
   const elapsed=Math.max(0,now-lastGateFrame); lastGateFrame=now;
-  const target=mode==='right'?1:0;
+  const target=attacker.open?1:0;
   gatePose=target+(gatePose-target)*Math.exp(-12*elapsed);
   g.save();g.lineCap='round';
   // The steel door blocks the inner fork at rest. Retracted, it forms the
@@ -181,7 +191,7 @@ function status(){
   stack.setAttribute('aria-label','추첨 스택 '+count+' / 5');
   if($('stackCount')) $('stackCount').textContent=count+' / 5';
   $('phase').textContent=insertion?'지폐 인식 중':mode==='empty'?'지폐 투입 대기':mode==='right'?
-    '우타 · '+(1+Math.floor(rightHits/10))+' 라운드 · '+(rightHits%10)+'/10':activeDraw?'헤소 추첨 중':'일반 · 좌타';
+    '우타 · '+attacker.round+' 라운드 · '+(attacker.open?'개방':'닫힘')+' · '+attacker.hits+'/10':activeDraw?'헤소 추첨 중':'일반 · 좌타';
   $('insert').disabled=Boolean(insertion)||stock>=250||payout>0;
   $('handle').inert=mode==='empty'||Boolean(insertion);
 }
@@ -220,8 +230,8 @@ function updateWarning(){
   const direction=mode==='right'&&force<95?'right':mode==='normal'&&force>=95?'left':'';
   if(direction!==directionAlert){directionAlert=direction;directionSince=now;}
   const compact=mode==='right'&&(!direction||now-directionSince>=1.65);
-  const round='R'+(1+Math.floor(rightHits/10))+'/3';
-  const value=compact?(direction?'▶ 우타 필요 · 끝까지 돌리세요':'우타 진행')+'  ·  '+round+'  ·  '+(rightHits%10)+'/10':
+  const gateMessage=attacker.open?'어태커 개방':attacker.round===ROUND_COUNT?'어태커 닫힘 · 지급 마무리':'어태커 닫힘 · 다음 개방 대기';
+  const value=compact?(direction?'▶ 우타 필요 · 끝까지 돌리세요':'▶ 우타 유지')+'  ·  '+gateMessage:
     direction==='right'?'▶ 우타 필요 · 손잡이를 끝까지 돌리세요':
     direction==='left'?'◀ 좌타로 돌리세요 · 우타 구슬 반환':now<warningUntil?warningMessage:'';
   const el=$('warning');
@@ -230,13 +240,13 @@ function updateWarning(){
   el.hidden=!value;
 }
 function fire(){
-  if(!stock||!force||insertion||mode==='empty'||$('guide').open||!tray.take())return;
+  if(!stock||!force||insertion||mode==='empty'||$('guide').open)return;
+  // A weak shot drops back through the launch throat before the next ball seats.
+  if(balls.some(ball=>ball.launch && ball.head<riseToBend) || !tray.take())return;
   stock--;shots++;lastShot=now;
   const right=force>=95;
-  const route=right?(mode==='right'?'attacker':'return'):'field';
-  if(route==='return')warn('◀ 좌타로 돌리세요 · 구슬 반환');
-  balls.push({x:16,y:533,t:0,launch:true,route,vx:0,vy:0,
-    end:right?1.42:.40+force*.004+rand()*.055});
+  if(right && mode!=='right')warn('◀ 좌타로 돌리세요 · 구슬 반환');
+  balls.push(springShot(force,rand(),mode==='right'?'attacker':'return'));
   BallAudio.launch(sound?ac:null);status();
 }
 // Each entry queues a complete presentation alongside its independently drawn outcome.
@@ -266,20 +276,24 @@ function drawTicket(){
   let third=won?first:digit();
   if(!won&&first===second&&second===third)third=third%9+1;
   // Select the tease from the existing lottery result. In normal play about
-  // 96% of Lucky Chances settle on 676, while overall jackpot odds stay 1/319.7.
+  // 96% of Lucky Chances settle on 767, while overall jackpot odds stay 1/319.7.
   const lucky=rand() < (won ? 0.8 : 0.06);
-  return {won,lucky,digits:lucky?[7,won?7:6,7]:[first,second,third],variant:nextBattleScene(),elapsed:0,pushTime:null};
+  const matchingSides = first===third;
+  const stage = won || lucky || (matchingSides && rand()<.38) ? 'battle' : matchingSides ? 'reach' : 'short';
+  return {won,lucky,digits:lucky?[7,won?7:6,7]:[first,second,third],stage,
+    variant:stage==='battle'?nextBattleScene():null,patrolOffset:rand()*18,elapsed:0,pushTime:null};
 }
 function forceWinningResult(ticket){
   if(!ticket||ticket.won)return;
   ticket.won=true;
+  if(ticket.stage!=='battle'){ticket.stage='battle';ticket.variant=nextBattleScene();}
   ticket.digits.fill(ticket.lucky?7:ticket.digits[0]);
 }
 function startNext(){
   if(activeDraw||mode!=='normal'||!waiting.length)return;
   activeDraw=waiting.shift();
   if($('alwaysWin').checked)forceWinningResult(activeDraw);
-  msg('헤소 추첨 · '+battleScenes[activeDraw.variant]);
+  msg('헤소 추첨 · 도형 변동');
 }
 function score(){
   hits++;payout++;
@@ -294,25 +308,44 @@ function advanceBattle(dt){
   if(!activeDraw)return;
   activeDraw.elapsed+=dt;
   const finish=reelStopTime(activeDraw);
-  if(activeDraw.elapsed<finish+reelTiming.hold)return;
+  if(activeDraw.elapsed<finish+drawTiming(activeDraw).hold)return;
   const result=activeDraw;
   activeDraw=null;
   drawReelReveal(standby.getContext('2d'),result,true);
   if(result.won){
-    wins++;mode='right';rightHits=0;gateOpened=now;warningUntil=0;
+    wins++;mode='right';rightHits=0;warningUntil=0;bonusStartedAt=now;
+    openAttackerRound(1);
     msg('대당첨! 우타로 어태커를 노리세요.');
   } else {
     msg('추첨 종료 · 다음 헤소 입상을 노리세요.');startNext();
   }
   status();
 }
+function openAttackerRound(round){
+  attacker.round=round;attacker.open=true;attacker.hits=0;
+  attacker.transitionAt=now+ROUND_SECONDS;
+  status();
+}
+function closeAttackerRound(){
+  attacker.open=false;attacker.transitionAt=now+ROUND_GAP;
+  msg(attacker.round===ROUND_COUNT?'최종 라운드 마감':'라운드 마감 · 다음 개방을 기다리세요.');
+  status();
+}
+function advanceAttacker(){
+  if(mode!=='right'||now<attacker.transitionAt)return;
+  if(attacker.open){closeAttackerRound();return}
+  if(attacker.inTransit)return;
+  if(attacker.round<ROUND_COUNT){
+    openAttackerRound(attacker.round+1);msg(attacker.round+'라운드 · 어태커 개방');
+    return;
+  }
+  mode='normal';warningUntil=0;
+  msg('3라운드 완료 · 상구 '+(rightHits*15)+'개 · 좌타로 복귀하세요.');
+  showBonusReceipt(rightHits*15);
+  startNext();status();
+}
 function collectAttacker(){
-  if(mode!=='right'){payout++;return}
-  rightHits++;payout+=15;
-  if(rightHits===ATTACKER_CAPACITY){
-    mode='normal';warningUntil=0;msg('3라운드 완료 · 상구 450개 · 좌타로 복귀하세요.');
-    startNext();
-  }else if(rightHits%10===0){gateOpened=now;msg('다음 라운드 · 우타를 유지하세요.')}
+  attacker.inTransit--;attacker.hits++;rightHits++;payout+=15;
   status();
 }
 function bounce(b,x,y,r,coef){
@@ -331,33 +364,24 @@ function advanceBall(b,dt){
   b.t+=dt;
   if(b.route==='service')return advanceServiceDrain(b,dt);
   if(b.launch){
-    const t=Math.min(b.t,b.end);
-    if(t<.30){b.x=16;b.y=533-1190*t}
-    else {
-      const u=(t-.30)*2.65;
-      b.x=300-284*Math.cos(u);b.y=176-150*Math.sin(u);
-      if(sound)BallAudio.rail(ac,Math.hypot(284*Math.sin(u),150*Math.cos(u))*2.65,b.x);
+    if(runLaunchGuide(b,dt)){
+      payout++;
+      msg('약하게 발사된 구슬이 레일을 되돌아와 반환됐습니다.');
+      return true;
     }
-    if(b.t>=b.end){
-      b.launch=false;
-      const u=(b.end-.30)*2.65;
-      b.vx=240*Math.sin(u);b.vy=-200*Math.cos(u);
-      if(b.route!=='field'){
-        // Leave the crown with its tangent velocity, into the fixed transfer sleeve.
-        b.vx=284*2.65*Math.sin(u);
-        b.vy=-150*2.65*Math.cos(u);
-      }
-    }
+    if(sound)BallAudio.rail(ac,Math.hypot(b.vx,b.vy),b.x);
     return false;
   }
   b.vy+=510*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;
   if(b.route!=='field'){
     if(!b.crossedGate && b.y>=rightTrough.gateY){
       b.crossedGate=true;
-      // Balls committed to the open fork finish before the 30th payout closes it.
-      // Earlier normal-mode shots keep their refund even if a jackpot starts in flight.
-      const reserved=balls.filter(other=>other!==b&&other.crossedGate&&other.route==='attacker').length;
-      if(mode!=='right'||rightHits+reserved>=ATTACKER_CAPACITY)b.route='return';
+      // The fork sensor closes the door on entry ten. A ball past that
+      // sensor has earned its place even while the door is swinging shut.
+      if(b.route==='attacker'&&attacker.open){
+        attacker.inTransit++;
+        if(attacker.hits+attacker.inTransit===ROUND_CAPACITY)closeAttackerRound();
+      }else b.route='return';
     }
     if(containChute(b)&&sound)BallAudio.rail(ac,Math.hypot(b.vx,b.vy),b.x);
     return false;
@@ -401,7 +425,7 @@ function finishBallStep(b,dt){
   return enteredOut(b,field);
 }
 function step(dt){
-  now+=dt;advanceTray(dt);
+  now+=dt;advanceAttacker();advanceTray(dt);
   if(force && now-lastShot>=.60)fire();
   advancePlayfield(dt);
   for(const p of pegs)p.light=Math.max(0,p.light-dt);
@@ -413,6 +437,7 @@ function advancePlayfield(dt){
   for(let n=0;n<steps;n++){
     advanceFieldwork(field,tick);
     for(let i=balls.length-1;i>=0;i--)if(advanceBall(balls[i],tick))balls.splice(i,1);
+    resolveCrownContacts(balls);
     resolveBallContacts(balls,field,rails,sound?playBallContact:null);
     for(let i=balls.length-1;i>=0;i--)if(finishBallStep(balls[i],tick))balls.splice(i,1);
   }

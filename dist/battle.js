@@ -226,10 +226,36 @@ const drawBattle = (() => {
     text(c,'대당첨',0,-114,37,'#ffdfa9','center','Georgia, "Malgun Gothic", serif');
     metal(c,'450',0,-2,175);
     text(c,'賞 球',0,94,33,'#ffdda4','center','Georgia, "Malgun Gothic", serif');
-    text(c,'우타 모드 완료 시 획득',0,140,18,'#fff2ce','center');
+    text(c,'3라운드 최대 상구',0,140,18,'#fff2ce','center');
     c.restore();
   }
   globalThis.drawJackpotAward = reward;
+  globalThis.drawBonusRound = function(c, elapsed, round, hits, earned, complete=false) {
+    c.save();
+    sky(c,'#071827','#124b61','#090e24');
+    for(let i=0;i<46;i++){
+      const x=(noise(i+42)*680+elapsed*(2+i%5))%680-40;
+      circle(c,x,noise(i+15)*580,.7+noise(i)*1.7,'#a6e8f0aa');
+    }
+    glow(c,472,259,181,'#2b88a4');
+    const pose={arm:-.45,elbow:.5,head:-.08,leg:-.26,back:.2,lean:-.06};
+    machine(c,490,387+3*Math.sin(elapsed*1.3),1.66,-1,ivory,pose,false,'blade');
+    const shade=c.createLinearGradient(42,0,455,0);
+    shade.addColorStop(0,'#071321e6');shade.addColorStop(.67,'#071321be');shade.addColorStop(1,'#07132100');
+    c.fillStyle=shade;c.fillRect(0,140,600,330);
+    text(c,complete?'BONUS RESULT':'ROUND  '+round+' / 3',95,233,33,'#bdeff6');
+    text(c,'획득 상구',98,275,21,'#ffe2a5');
+    metal(c,String(earned),207,345,101);
+    text(c,'개',319,371,22,'#f4e7c7');
+    if(!complete){
+      for(let i=0;i<10;i++){
+        c.fillStyle=i<hits?'#ffd87b':'#354e62';
+        c.fillRect(98+i*20,414,15,6);
+      }
+      text(c,'입상  '+hits+' / 10',98,447,19,'#daf7f7');
+    }
+    c.restore();
+  };
   function sky(c,top,mid,bottom) {
     const g=c.createLinearGradient(0,80,0,510);
     g.addColorStop(0,top);g.addColorStop(.57,mid);g.addColorStop(1,bottom);
@@ -295,6 +321,26 @@ const drawBattle = (() => {
     for(let i=0;i<2;i++)beam(c,-dir*(22+i*8)*s,(-22+i*16)*s,-dir*(exhaust+39+i*8)*s,(-21+i*18)*s,enemy?'#ff8a6c':'#93faff',.51);
     machine(c,0,0,s,dir,enemy?crimson:ivory,flight,enemy,'blade');c.restore();
   }
+  // The base stage keeps the pilots on patrol while the three symbols vary.
+  globalThis.drawPatrol = function drawPatrol(c,t,stageOffset=0) {
+    const time=t+stageOffset;
+    c.save();
+    landscape(c,time,false);
+    const farX=430+Math.sin(time*.22)*88;
+    flyingUnit(c,farX,243+Math.sin(time*.67)*6,.43,1,false,-.08,time);
+    const x=216+Math.sin(time*.29)*90, y=278+Math.cos(time*.77)*12;
+    flyingUnit(c,x,y,1.08,1,false,.035*Math.sin(time*.83),time);
+    // The service gantry passes the camera at a different rate to the skyline.
+    const column=700-time*45%850;
+    segment(c,column-38,513,column+28,385,'#293442',13);
+    segment(c,column-12,467,column+41,408,'#6c6467',4);
+    segment(c,-12,508,612,499,'#41424c',6);
+    for(let i=0;i<9;i++) {
+      const lamp=(i*88-time*45%88);
+      circle(c,lamp,504-lamp*.015,2.1,'#ffc886');
+    }
+    c.restore();
+  };
   function aerialSequence(c,t,won) {
     sky(c,'#197aa4','#83cfd5','#f1c69b');
     circle(c,425,191,38,'#fff1bd');glow(c,425,191,83,'#ffdb9c56');
