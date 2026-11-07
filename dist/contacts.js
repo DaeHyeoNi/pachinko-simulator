@@ -26,15 +26,19 @@ function contactSubsteps(balls, dt) {
 // Centers and inner half-widths of the clear right-side trough. The first point
 // meets the launch ellipse at its release tangent; the fork shares one hinge.
 const rightTrough = {
-  gateY: 445,
+  gateY: 445, supportGateY: 344,
   common: [[580,150,9],[584,183,9],[584,246,9],[580,307,9.5],
-    [572,365,10],[562,412,10],[552,445,10]],
+    [575,344,10]],
+  support: [[575,344,10],[569,354,9.8],[558,366,10],[547,378,9.7],[542,389,9.5]],
+  lowerCommon: [[575,344,10],[572,365,10],[562,412,10],[552,445,10]],
   attacker: [[552,445,10],[546,457,9.5],[537,470,9],[531,481,9]],
   return: [[552,445,10],[558,456,9],[564,470,9],[564,484,9],
     [553,502,11],[532,523,12],[506,539,13],[487,550,13]]
 };
 function containChute(ball) {
-  const points=ball.y<=rightTrough.gateY?rightTrough.common:rightTrough[ball.route];
+  let points=rightTrough[ball.route];
+  if(ball.y<=rightTrough.supportGateY)points=rightTrough.common;
+  else if(ball.y<=rightTrough.gateY&&ball.route!=='support')points=rightTrough.lowerCommon;
   let index=1;
   while(index<points.length-1 && points[index][1]<ball.y)index++;
   const [x1,y1,w1]=points[index-1], [x2,y2,w2]=points[index];

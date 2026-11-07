@@ -230,7 +230,7 @@ const drawBattle = (() => {
     c.restore();
   }
   globalThis.drawJackpotAward = reward;
-  globalThis.drawBonusRound = function(c, elapsed, round, hits, earned, complete=false) {
+  globalThis.drawBonusRound = function(c, elapsed, round, hits, earned, complete=false, rounds=3, chain=1) {
     c.save();
     sky(c,'#071827','#124b61','#090e24');
     for(let i=0;i<46;i++){
@@ -243,7 +243,8 @@ const drawBattle = (() => {
     const shade=c.createLinearGradient(42,0,455,0);
     shade.addColorStop(0,'#071321e6');shade.addColorStop(.67,'#071321be');shade.addColorStop(1,'#07132100');
     c.fillStyle=shade;c.fillRect(0,140,600,330);
-    text(c,complete?'BONUS RESULT':'ROUND  '+round+' / 3',95,233,33,'#bdeff6');
+    text(c,complete?'BONUS RESULT':'ROUND  '+round+' / '+rounds,95,233,33,'#bdeff6');
+    text(c,chain+'연속 당첨',98,185,23,'#fff2c0');
     text(c,'획득 상구',98,275,21,'#ffe2a5');
     metal(c,String(earned),207,345,101);
     text(c,'개',319,371,22,'#f4e7c7');
