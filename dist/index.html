@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101110">
   <title>노을 신사 | GINKYO PACHINKO</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="handle.css">
+  <link rel="stylesheet" href="style.css?v=cabinet3">
+  <link rel="stylesheet" href="handle.css?v=cabinet3">
   <link rel="stylesheet" href="bank.css">
 </head>
 <body>
@@ -36,25 +36,16 @@
       </symbol>
     </defs>
   </svg>
-  <header>
-    <div class="bar">
-      <div class="brand"><span class="logo"><svg aria-hidden="true"><use href="#gate"/></svg></span><div>GINKYO<small>PACHINKO CLUB</small></div></div>
-      <div class="nav">
+  <main>
+    <section class="cabinet" aria-label="노을 신사 파칭코 기체">
+      <div class="screw a"></div><div class="screw b"></div><div class="screw c"></div><div class="screw d"></div>
+      <header class="machine-head">
+        <div class="nameplate"><small>G I N K Y O</small><h1>노을 신사 <span lang="ja">夕映神社</span></h1></div>
+        <div class="nav">
         <button id="sound" type="button"><svg aria-hidden="true"><use href="#vol"/></svg><span>사운드 OFF</span></button>
         <button id="help" type="button"><i aria-hidden="true">?</i> 이용 안내</button>
       </div>
-    </div>
-  </header>
-
-  <main>
-    <div class="intro">
-      <h1>노을 신사 <span lang="ja">夕映神社</span></h1>
-      <div class="online"><b></b><span id="phase" aria-live="polite">지폐 투입 대기</span></div>
-    </div>
-    <div class="grid">
-      <section class="cabinet" aria-label="노을 신사 파칭코 기체">
-        <div class="screw a"></div><div class="screw b"></div><div class="screw c"></div><div class="screw d"></div>
-        <div class="marquee" aria-hidden="true"><span>◆ ━━━</span> G I N K Y O <span>━━━ ◆</span></div>
+      </header>
         <div class="inner">
           <div class="side" aria-hidden="true"><strong>夕<br>映<br>神<br>社</strong><small>GINKYO WORKS</small></div>
           <div class="field">
@@ -64,48 +55,39 @@
               <div class="wing-port starboard"><div class="wing-arm"><svg viewBox="0 0 190 100"><use href="#wing-base"/><g class="wing-joint"><use href="#wing-tip"/></g></svg></div></div>
               <div class="crest-rail"><svg viewBox="0 0 100 72"><use href="#crest"/></svg></div>
             </div>
+            <div id="stack" role="img" aria-label="추첨 스택 0개, 최대 5개"><i></i><i></i><i></i><i></i><i></i></div>
             <div id="warning" role="alert" hidden></div>
           </div>
           <div class="side right" aria-hidden="true"><small>MODEL · GK–01</small><strong>幸<br>運<br>祈<br>願</strong></div>
         </div>
+      <div class="lower-deck">
+        <section class="feed-deck" aria-label="구슬 받침대와 대여기">
         <div class="tray-frame">
           <div class="tray-ledge" aria-hidden="true"></div>
           <div class="tray-basin"><canvas id="tray" width="600" height="164" role="img" aria-label="위쪽 투입구와 붉은 외부 구슬 받침대. 지급받은 구슬이 쌓이고 발사할 때마다 급탄구로 빠져나갑니다."></canvas></div>
         </div>
-        <div class="base" aria-hidden="true"><span>✦</span><i></i><strong>夕 映 神 社</strong><i></i><span>✦</span></div>
-      </section>
-
-      <aside>
-        <section class="panel controls" aria-label="플레이 콘솔">
-          <div class="balance">
-            <span><i class="ball"></i> 보유 구슬</span>
-            <div><strong id="stock">0</strong><small>개</small></div>
-          </div>
+          <div class="feed-controls">
+            <div class="balance"><span>보유 구슬</span><div><strong id="stock">0</strong><small>개</small></div></div>
           <div id="bank">
             <button id="insert" type="button">
               <span class="acceptor" aria-hidden="true"><i class="slot"></i><i class="banknote"><span>1000</span></i></span>
               <span class="bank-caption">가상 지폐 넣기<small>¥1,000<span aria-hidden="true"> → </span>250구슬</small></span>
             </button>
           </div>
-          <div id="handle"></div>
-          <div class="stock-line">
-            <span>추첨 스택</span>
-            <div id="stack" role="img" aria-label="추첨 스택 0개, 최대 5개"><i></i><i></i><i></i><i></i><i></i></div>
           </div>
         </section>
-        <section class="panel stats">
-          <h2>세션 기록</h2>
-          <div class="statrow">
-            <div>발사 수<b id="shots">0</b></div><div>헤소 입상<b id="hits">0</b></div><div>대당첨<b id="wins">0</b></div>
-          </div>
-        </section>
-        <section class="log" aria-label="기기 안내">
-          <div class="eyebrow"><em></em> MACHINE LOG</div>
-          <p id="log" aria-live="polite">가상 지폐를 넣으면 구슬 250개가 지급됩니다.</p>
-        </section>
-      </aside>
-    </div>
-    <footer>GINKYO &nbsp; / &nbsp; ARCADE COLLECTION <span>GK–01 &nbsp; ◆ &nbsp; DIGITAL SIMULATOR</span></footer>
+        <div id="handle"></div>
+      </div>
+      <div class="telemetry">
+        <span id="phase" aria-live="polite">지폐 투입 대기</span>
+        <dl class="meters" aria-label="세션 기록">
+          <div><dt>발사</dt><dd id="shots">0</dd></div>
+          <div><dt>헤소</dt><dd id="hits">0</dd></div>
+          <div><dt>대당첨</dt><dd id="wins">0</dd></div>
+        </dl>
+      </div>
+      <p id="log" aria-live="polite">가상 지폐를 넣으면 구슬 250개가 지급됩니다.</p>
+    </section>
   </main>
   <dialog id="guide" aria-labelledby="guide-title">
     <h2 id="guide-title">이용 안내</h2>
@@ -118,9 +100,9 @@
   <script src="tray.js"></script>
   <script src="battle.js"></script>
   <script src="handle.js"></script>
-  <script src="fieldwork.js"></script>
+  <script src="fieldwork.js?v=cabinet3"></script>
   <script src="flow.js"></script>
   <script src="bank.js"></script>
-  <script src="game.js"></script>
+  <script src="game.js?v=cabinet3"></script>
 </body>
 </html>

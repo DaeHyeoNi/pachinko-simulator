@@ -24,29 +24,27 @@ function createFieldwork() {
   road(196,88,13,-3,4); divider(262,91);
   road(305,95,12,4,5); road(381,101,10,6.5,5);
   road(452,134,9,8,4);
-  road(96,182,11,-4,6); divider(181,148);
-  road(203,158,10,6,4); road(266,173,13,-2,4);
-  road(348,156,11,5,5); divider(423,174,-1);
-  road(58,210,7,9,5); divider(120,226); road(148,218,9,-6,4);
-  road(72,275,11,4,6); road(159,264,-5,10.5,4);
-  road(72,318,8,-6,3); divider(103,331); road(132,321,10,4.2,4);
+  road(96,182,11,-4,5); divider(179,128);
+  road(207,136,10,4,4); road(270,147,13,-2,4);
+  road(348,138,11,3,5); divider(423,133,-1);
+  road(58,210,7,9,5); divider(120,226);
+  road(72,275,11,4,6);
+  road(72,318,8,-6,3); divider(103,331);
   road(68,358,9.5,5.7,7); road(162,409,10.8,4.5,9);
-  road(467,200,10,6.5,5); road(435,235,7,9,5);
-  road(521,254,-9,6,5); divider(437,292,-1);
-  road(518,302,-8,7,5); road(444,338,-7,8,4);
+  road(467,200,10,6.5,5); road(467,235,7,9,3);
+  road(527,254,-9,6,5); divider(475,292,-1);
+  road(525,307,-8,7,5); road(484,338,-7,8,3);
   road(511,359,-10,5,6); divider(441,396,-1);
   // The two independently pitched banks below the LCD feed the start-pocket area.
   road(89,399,11.2,5.4,7); divider(104,437);
   road(139,459,11.4,4.9,6);
-  road(210,478,10,3,4);
+  road(210,478,11.75,3,6);
   road(493,406,-11,5.4,6); road(414,432,-10.5,3.8,6);
-  road(465,457,-11,5.1,5); road(395,478,-10,3,4);
+  road(465,457,-11,5.1,5); road(395,478,-11.7,3,6);
   divider(242,397); divider(349,406,-1);
   nail(280,459); nail(317,449); nail(294,423);
   // Two actual brass nails frame the narrow mouth above the single heso.
-  nail(289,511,2.85,-.8); nail(311,511,2.85,.8);
-  // A short offset crossover sends most incoming balls past the pocket.
-  road(273,476,10,3,4);
+  nail(287.5,511,2.85,-.8); nail(312.5,511,2.85,.8);
   rails.push([35,237,51,270],[27,340,51,374],[62,446,92,466],[529,421,505,445]);
   const wheel={x:143,y:397,angle:-.46,speed:0,inertia:147};
   return {pegs,rails,wheel};

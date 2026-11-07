@@ -102,3 +102,62 @@
 @media (prefers-reduced-motion: reduce) {
   .rh-index, .rh-grip, .rh-lock i { transition: none; }
 }
+/* The rotary assembly sits on the front deck at the right edge of the ball tray. */
+#handle {
+  display: grid;
+  grid-template-rows: auto minmax(0,1fr) auto;
+  align-items: center;
+  min-width: 0;
+  padding: 4px 5px 3px;
+  border: 1px solid #786959;
+  border-radius: 12px 12px 18px 18px;
+  background: radial-gradient(ellipse at 45% 43%,#655f57,#393531 62%,#292622);
+  box-shadow: inset 0 1px #d7ccac75,0 2px 2px #16120e9c;
+}
+.rh-top { gap: 2px; padding: 0 2px; }
+.rh-top strong { font-size: 10px; color: #d4c8b8; white-space: nowrap; }
+.rh-readout { font-size: 9px; }
+.rh-readout b { font-size: 14px; }
+.rh-instrument { width: min(100%,111px); margin: 2px auto 1px; }
+.rh-dial {
+  background: radial-gradient(circle at 45% 38%,#49453d 54%,#3a332d 59%,#141514 62%,#8e8778 65%,#33312a 68%,transparent 70%);
+}
+.rh-rotor {
+  inset: 15%; border: 1px solid #403d37;
+  background: conic-gradient(from 17deg,#eee9df,#53514b 9%,#e8e7e0 20%,#7c7b78 25%,#faf7e8 34%,#393a39 43%,#9e9d93 58%,#fcf9eb 75%,#787b7b 87%,#e7e8df);
+  box-shadow: 2px 4px 4px #0009,0 0 0 2px #c6c2ad,0 0 0 4px #5c211c,inset 0 1px 2px #fff;
+}
+.rh-face {
+  inset: 8%;
+  border: 1px solid #6e726f;
+  background: radial-gradient(ellipse at 29% 16%,#fffcf1 0, #ffffffc0 6%, transparent 24%),
+    radial-gradient(ellipse at 74% 30%, #5c6568 1%,transparent 40%),
+    linear-gradient(148deg,#bfcbc6 3%,#8e9490 24%,#e3e4d8 41%,#5a6261 54%,#3a4240 66%,#92968e 82%,#e4e4d8);
+  box-shadow: inset 0 0 0 1px #d8dcd2,inset -3px -3px 5px #26292799,1px 2px 3px #24231f;
+}
+.rh-face::after { color: #39403f; text-shadow: 0 1px #fff9; font-size: clamp(15px,2vw,20px); }
+.rh-grip::before {
+  left: 30%; top: -1%; width: 40%; height: 28%; border-radius: 40% 45% 47% 47%;
+  border: 1px solid #575956;
+  background: linear-gradient(105deg,#555b59,#e9eee7 19%,#d0d3c9 35%,#7d8480 52%,#a9aba2 74%,#555952);
+  box-shadow: 0 3px 4px #322e28b0,inset 0 1px #fff9;
+}
+.rh-marks { bottom: 1%; color: #d0c9b6; font-size: 8px; }
+.rh-lock-row { border-top: 0; gap: 3px; padding: 1px 2px 0; justify-content: center; }
+.rh-lock-row span { font-size: 10px; color: #e7d9c5; white-space: nowrap; }
+.rh-lock-row .rh-lock { position: relative; width: 32px; height: 20px; padding: 1px; }
+.rh-lock::after { content: ""; position: absolute; inset: -5px -3px; }
+.rh-lock i { width: 14px; height: 14px; }
+.rh-lock[aria-checked="true"] i { transform: translateX(13px); }
+.rh-hint { display: none; }
+.rotary-handle[inert] { opacity: .8; }
+@media (max-width: 520px) {
+  #handle { padding: 3px; }
+  .rh-top { justify-content: center; gap: 5px; }
+  .rh-top strong, .rh-lock-row span { font-size: 9px; }
+  .rh-readout b { font-size: 12px; }
+  .rh-instrument { width: min(100%,86px); }
+}
+@media (max-height: 760px) and (min-width: 521px) {
+  .rh-instrument { width: min(100%,90px); }
+}

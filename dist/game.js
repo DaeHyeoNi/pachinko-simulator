@@ -14,7 +14,14 @@ const bank=new BanknoteAcceptor();
 const standby=document.createElement('canvas');
 standby.width=standby.height=600;
 drawBattle(standby.getContext('2d'),1.05,0,[0,0,0],false);
-const rails=[...field.rails,[196,267,204,239],[204,239,230,224],[230,224,370,224],[370,224,396,239],[396,239,404,267],[196,267,196,340],[404,267,404,340],[196,340,217,359],[217,359,300,375],[300,375,383,359],[383,359,404,340]];
+// One outline drives both collisions and the molded display surround.
+const displayOutline = [[149,205],[166,178],[300,166],[434,178],[451,205],
+  [451,334],[432,354],[334,379],[300,382],[266,379],[168,354],[149,334]];
+const rails = [...field.rails, ...displayOutline.map(([x,y],i)=>{
+  const [u,v] = displayOutline[(i+1)%displayOutline.length];
+  return [x,y,u,v];
+})];
+const lcd = {x:162, y:187, w:276, h:156};
 const handle = new RotaryHandle($('handle'), value => {force=value;});
 
 function line(x,y,a,b,color,w){g.beginPath();g.moveTo(x,y);g.lineTo(a,b);g.lineWidth=w;g.strokeStyle=color;g.stroke()}
@@ -22,33 +29,44 @@ function circle(x,y,r,c){g.beginPath();g.arc(x,y,r,0,TAU);g.fillStyle=c;g.fill()
 function metal(y,h){let grd=g.createLinearGradient(0,y,0,y+h);[[0,'#f1d3a0'],[.17,'#926a3d'],[.38,'#3d291d'],[.68,'#aa8553'],[1,'#553822']].forEach(([v,c])=>grd.addColorStop(v,c));return grd}
 function box(x,y,w,h,r,c,stroke){g.beginPath();g.roundRect(x,y,w,h,r);g.fillStyle=c;g.fill();if(stroke){g.strokeStyle=stroke;g.lineWidth=2;g.stroke()}}
 function txt(t,x,y,font,c){g.textAlign='center';g.font=font;g.fillStyle=c;g.fillText(t,x,y)}
+function drawDisplay() {
+  g.beginPath();
+  displayOutline.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));
+  g.closePath();
+  g.fillStyle=metal(166,216); g.fill();
+  g.strokeStyle='#271b17'; g.lineWidth=3; g.stroke();
+  box(157,182,286,166,8,'#100f10','#ae9574');
+  txt('G I N K Y O',300,180,'bold 9px Georgia','#271b14');
+
+  g.save();
+  g.beginPath(); g.roundRect(lcd.x,lcd.y,lcd.w,lcd.h,5); g.clip();
+  if(activeDraw) {
+    // Crop the square scene like a widescreen camera; keep the machines in proportion.
+    const sceneScale=lcd.w/600;
+    g.translate(lcd.x,lcd.y+(lcd.h-600*sceneScale)/2);
+    g.scale(sceneScale,sceneScale);
+    drawBattle(g,activeDraw.elapsed,activeDraw.variant,activeDraw.digits,activeDraw.won);
+  } else if(!hasResult) {
+    g.drawImage(standby,0,130,600,340,lcd.x,lcd.y,lcd.w,lcd.h);
+  } else {
+    g.fillStyle='#1e1416'; g.fillRect(lcd.x,lcd.y,lcd.w,lcd.h);
+    const enamel=g.createLinearGradient(0,201,0,329);
+    enamel.addColorStop(0,'#311d1e'); enamel.addColorStop(.43,'#a84e36'); enamel.addColorStop(1,'#301b17');
+    reels.forEach((value,index)=>{
+      const x=169+index*89;
+      box(x,202,84,124,5,enamel,'#9a784f');
+      txt(value,x+42,296,'bold italic 91px Georgia','#ffe1ae');
+    });
+  }
+  g.restore();
+}
 function draw(){let d=Math.min(2,devicePixelRatio||1),size=Math.max(1,Math.round(cv.clientWidth*d));if(cv.width!==size){cv.width=cv.height=size}g.setTransform(size/600,0,0,size/600,0,0);g.clearRect(0,0,600,600);
 let sh=g.createRadialGradient(300,260,170,300,280,390);sh.addColorStop(0,'#0c080800');sh.addColorStop(1,'#120c09c9');g.fillStyle=sh;g.fillRect(0,0,600,600);
-g.save();
-g.translate(300,297);
-const bezel=[[-108,-53],[-83,-72],[83,-72],[108,-53],[108,43],[84,62],[0,78],[-84,62],[-108,43]];
-g.beginPath();
-bezel.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));
-g.closePath();g.fillStyle=metal(-72,150);g.fill();g.strokeStyle='#291a12';g.lineWidth=4;g.stroke();
-box(-99,-54,198,110,9,'#201619','#d2ad72');
-txt('◆   G I N K Y O   ◆',0,-39,'bold 9px Georgia','#e4bf84');
-if(!hasResult){
-  g.drawImage(standby,0,105,600,360,-92,-33,184,78);
-} else {
-  for(let j=0;j<3;j++){
-    const x=-88+j*59;
-    const enamel=g.createLinearGradient(0,-30,0,44);
-    enamel.addColorStop(0,'#52271e');enamel.addColorStop(.45,'#9d4430');enamel.addColorStop(1,'#351a17');
-    box(x,-30,55,70,3,enamel,'#92673c');
-    txt(reels[j],x+27,28,'bold italic 57px Georgia','#ffdda2');
-  }
-}
-for(let i=0;i<9;i++)circle(-72+i*18,58-Math.abs(i-4)*1.8,2.3,activeDraw||i%2?'#f5c183':'#9c7046');
-g.restore();
+drawDisplay();
 drawFieldwork(g,field,now);
 // Only the opening between the two gold nails accepts a start ball.
-box(287,521,26,12,4,'#21140f','#bb935e');
-line(293,521,307,521,'#060606',4);
+box(284,521,32,12,4,'#21140f','#bb935e');
+line(290,521,310,521,'#060606',4);
 txt('始動',300,549,'bold 12px serif','#f3cc81');
 g.save();
 g.beginPath();g.moveTo(576,175);g.bezierCurveTo(596,275,575,407,561,467);
@@ -66,7 +84,7 @@ for(const ball of balls){
   if(ball.route==='service')drawServiceDrain(g,ball);
   else tray.drawPlayfieldBall(g,ball);
 }
-if(activeDraw) drawBattle(g,activeDraw.elapsed,activeDraw.variant,activeDraw.digits,activeDraw.won);
+
 }
 function msg(value){$('log').textContent=value}
 function stackCount(){return waiting.length + Number(Boolean(activeDraw))}
@@ -234,11 +252,11 @@ function advanceBall(b,dt){
     if(b.y<Math.min(y,z)-8||b.y>Math.max(y,z)+8)continue;
     const dx=a-x,dy=z-y,u=Math.max(0,Math.min(1,((b.x-x)*dx+(b.y-y)*dy)/(dx*dx+dy*dy)));
     bounce(b,x+u*dx,y+u*dy,7,.48);
-    if(y===224&&z===224&&b.y<224&&224-b.y<9)b.vx+=(b.x<300?-1:1)*210*dt;
+
   }
   if(previousY<520&&b.y>=520){
     const crossingX=previousX+(b.x-previousX)*(520-previousY)/(b.y-previousY);
-    if(Math.abs(crossingX-300)<3.5 && mode==='normal'){score();return true}
+    if(Math.abs(crossingX-300)<5 && mode==='normal'){score();return true}
   }
   advanceUnsticking(b,dt,field,rails);
   return b.y>610;
