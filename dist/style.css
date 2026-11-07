@@ -58,6 +58,15 @@ main{width:min(100%,800px,max(430px,70svh));margin:auto;padding:8px}
 /* Each lamp shares the scale and highlights of the molded acrylic beneath it.
    It sits behind the playfield canvas, including every ball and steel nail. */
 .crystal-lamps{position:absolute;inset:0;z-index:-1;pointer-events:none}
+.prism-row{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;display:none;z-index:1}
+.cabinet:is([data-fx="jackpot"],[data-fx="payout"]) .prism-row{display:block}
+.prism-row use{
+  /* Two bright packets travel out from the crown and meet below the stage. */
+  --angle:calc(var(--win-phase,0)*2turn - var(--k)*.051turn);
+  --chase:max(0,cos(var(--angle)));
+  color:hsl(calc(var(--k)*20deg + var(--win-phase,0)*360deg) 100% 64%);
+  opacity:clamp(.10,calc(.12 + .86 * var(--chase) * var(--chase) + var(--win-beat,0)*.38),1)
+}
 .crystal-lamps i{
   position:absolute;inset:0;opacity:0;
   background-image:url("machine-face.webp"),conic-gradient(from -18deg at 49% 36%,#ff7c80,#ffb465,#f2df71,#62ed89,#5fe6fc,#7792ff,#cc7dff,#ff74ac,#ff7c80);
@@ -83,7 +92,11 @@ main{width:min(100%,800px,max(430px,70svh));margin:auto;padding:8px}
   --brightness:1.5;--intensity:.92;--period:2.6s;
   animation:crystal-strike .42s ease-out var(--delay) both,crystal-spectrum var(--period) linear var(--delay) infinite;
 }
-.cabinet[data-fx="payout"] .crystal-lamps i{--brightness:1.32;--intensity:.86;--period:5.6s}
+.cabinet:is([data-fx="jackpot"],[data-fx="payout"]) .crystal-lamps i{
+  --brightness:calc(1.48 + var(--win-beat,0)*.92);
+  --period:2.4s;
+}
+.cabinet[data-fx="payout"] .crystal-lamps i{--intensity:.92;--period:3.1s}
 .cabinet[data-fx="idle"][data-reach="on"] .crystal-lamps .apron{
   background-image:url("machine-face.webp");filter:grayscale(.85) brightness(1.8);
   animation:reach-breath 1.35s ease-in-out infinite alternate;
@@ -114,10 +127,6 @@ main{width:min(100%,800px,max(430px,70svh));margin:auto;padding:8px}
 .wing-arm{transform-origin:9% 25%;transform:translate(-12%,-33%) rotate(-62deg);filter:drop-shadow(0 3px 2px #0b101bc9)}
 .mechanism svg{display:block;width:100%;overflow:visible}.wing-joint{transform-origin:106px 50px;transform:rotate(-62deg)}
 .crest-rail{position:absolute;width:22%;left:39%;top:0;transform:translateY(-100%);filter:drop-shadow(0 3px 3px #050916)}
-.cabinet[data-fx="jackpot"] .wing-arm{animation:wing-travel 2.5s both}.cabinet[data-fx="jackpot"] .wing-joint{animation:joint-travel 2.5s both}.cabinet[data-fx="jackpot"] .crest-rail{animation:crest-travel 2.5s both}
-@keyframes wing-travel{0%,100%{transform:translate(-12%,-33%) rotate(-62deg)}19%{transform:translate(17%,20%) rotate(16deg)}26%,68%{transform:translate(15%,18%) rotate(11deg)}}
-@keyframes joint-travel{0%,100%{transform:rotate(-62deg)}24%{transform:rotate(12deg)}32%,65%{transform:rotate(4deg)}}
-@keyframes crest-travel{0%,14%,100%{transform:translateY(-100%)}29%{transform:translateY(34%)}35%,65%{transform:translateY(27%)}}
 .lower-deck{
   --dome-width:clamp(67px,12vw,100px);--handle-width:clamp(94px,22%,151px);
   display:grid;align-items:stretch;grid-template-columns:calc(50% - var(--dome-width)/2) var(--dome-width) minmax(0,1fr) var(--handle-width);
@@ -173,6 +182,8 @@ dialog::backdrop{background:#040811c7}dialog h2{margin-top:0}dialog p{font-size:
 @media(max-width:350px){.nameplate small{display:none}.lower-deck{--handle-width:73px;--dome-width:48px}.balance small{display:none}.balance>span{font-size:8px}#chancePush{padding-inline:2px}#chancePush span{font-size:13px}}
 @media(max-height:760px) and (min-width:521px){main{width:min(100%,max(405px,70svh));padding:3px}.machine-head{min-height:33px}.lower-deck{padding:3px 5px 6px}}
 @media(prefers-reduced-motion:reduce){
+  .cabinet .prism-row use{opacity:.56;color:hsl(calc(var(--k)*20deg) 86% 64%)}
+  .cabinet:is([data-fx="jackpot"],[data-fx="payout"]) .crystal-lamps i{--brightness:1.45}
   .cabinet[data-fx] .wing-arm,.cabinet[data-fx] .wing-joint,.cabinet[data-fx] .crest-rail,.cabinet[data-chance] #chancePush{animation:none}
   .cabinet:is([data-fx="jackpot"],[data-fx="payout"]) .crystal-lamps i{animation:none;opacity:var(--intensity);filter:brightness(var(--brightness)) saturate(1.5)}
   .cabinet[data-fx="idle"][data-reach="on"] .crystal-lamps .apron{animation:none;opacity:.4}

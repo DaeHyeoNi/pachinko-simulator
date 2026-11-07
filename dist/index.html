@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b111b">
   <title>GINKYO | 파칭코</title>
-  <link rel="stylesheet" href="style.css?v=stage13">
-  <link rel="stylesheet" href="handle.css?v=stage13">
-  <link rel="stylesheet" href="bank.css?v=stage13">
+  <link rel="stylesheet" href="style.css?v=prism15">
+  <link rel="stylesheet" href="mechanism.css?v=prism15">
+  <link rel="stylesheet" href="handle.css?v=prism15">
+  <link rel="stylesheet" href="bank.css?v=prism15">
 </head>
 <body>
   <svg aria-hidden="true" class="symbols">
@@ -52,6 +53,59 @@
           <div class="field">
             <div class="crystal-lamps" aria-hidden="true"><i class="crown"></i><i class="port-guide"></i><i class="starboard-guide"></i><i class="apron"></i></div>
             <canvas id="board" width="600" height="600" aria-label="중앙 헤소와 오른쪽 어태커가 있는 파칭코 판면"></canvas>
+            <svg class="prism-row" viewBox="0 0 600 600" aria-hidden="true" focusable="false">
+              <defs>
+                <radialGradient id="prism-halo"><stop stop-color="currentColor" stop-opacity=".9"/><stop offset=".38" stop-color="currentColor" stop-opacity=".46"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></radialGradient>
+                <g id="lamp-prism">
+                  <ellipse rx="24" ry="11" fill="url(#prism-halo)"/>
+                  <path d="M-13 0 -8 -4 8 -3 13 0 8 4 -8 3Z" fill="currentColor"/>
+                  <path d="m-10 0 4-2 12 .3 4 1.6-4 1.2-12 .5Z" fill="#fff" opacity=".88"/>
+                  <path d="m-8 4 3 1.6L8 4" fill="none" stroke="currentColor" stroke-width="1"/>
+                </g>
+              </defs>
+                <use href="#lamp-prism" transform="translate(49 16) rotate(-7)" style="--k:6.5"/>
+                <use href="#lamp-prism" transform="translate(88 13) rotate(8)" style="--k:5.5"/>
+                <use href="#lamp-prism" transform="translate(128 22) rotate(12)" style="--k:4.5"/>
+                <use href="#lamp-prism" transform="translate(171 35) rotate(19)" style="--k:3.5"/>
+                <use href="#lamp-prism" transform="translate(208 35) rotate(-5)" style="--k:2.5"/>
+                <use href="#lamp-prism" transform="translate(250 20) rotate(-8)" style="--k:1.5"/>
+                <use href="#lamp-prism" transform="translate(283 13) rotate(-7)" style="--k:0.5"/>
+                <use href="#lamp-prism" transform="translate(317 13) rotate(7)" style="--k:0.5"/>
+                <use href="#lamp-prism" transform="translate(350 20) rotate(8)" style="--k:1.5"/>
+                <use href="#lamp-prism" transform="translate(392 35) rotate(5)" style="--k:2.5"/>
+                <use href="#lamp-prism" transform="translate(429 35) rotate(-19)" style="--k:3.5"/>
+                <use href="#lamp-prism" transform="translate(472 22) rotate(-12)" style="--k:4.5"/>
+                <use href="#lamp-prism" transform="translate(512 13) rotate(-8)" style="--k:5.5"/>
+                <use href="#lamp-prism" transform="translate(551 16) rotate(7)" style="--k:6.5"/>
+                <use href="#lamp-prism" transform="translate(53 77) rotate(-52)" style="--k:7"/>
+                <use href="#lamp-prism" transform="translate(40 107) rotate(-71)" style="--k:8"/>
+                <use href="#lamp-prism" transform="translate(34 147) rotate(-84)" style="--k:9"/>
+                <use href="#lamp-prism" transform="translate(32 188) rotate(-90)" style="--k:10"/>
+                <use href="#lamp-prism" transform="translate(29 231) rotate(-88)" style="--k:11"/>
+                <use href="#lamp-prism" transform="translate(33 276) rotate(-81)" style="--k:12"/>
+                <use href="#lamp-prism" transform="translate(42 313) rotate(-69)" style="--k:13"/>
+                <use href="#lamp-prism" transform="translate(58 347) rotate(-53)" style="--k:14"/>
+                <use href="#lamp-prism" transform="translate(84 365) rotate(-29)" style="--k:15"/>
+                <use href="#lamp-prism" transform="translate(120 385) rotate(24)" style="--k:16"/>
+                <use href="#lamp-prism" transform="translate(159 400) rotate(16)" style="--k:17"/>
+                <use href="#lamp-prism" transform="translate(202 409) rotate(15)" style="--k:18"/>
+                <use href="#lamp-prism" transform="translate(249 417) rotate(10)" style="--k:19"/>
+                <use href="#lamp-prism" transform="translate(276 425) rotate(12)" style="--k:20"/>
+                <use href="#lamp-prism" transform="translate(547 77) rotate(52)" style="--k:7.45"/>
+                <use href="#lamp-prism" transform="translate(560 107) rotate(71)" style="--k:8.45"/>
+                <use href="#lamp-prism" transform="translate(566 147) rotate(84)" style="--k:9.45"/>
+                <use href="#lamp-prism" transform="translate(568 188) rotate(90)" style="--k:10.45"/>
+                <use href="#lamp-prism" transform="translate(571 231) rotate(88)" style="--k:11.45"/>
+                <use href="#lamp-prism" transform="translate(567 276) rotate(81)" style="--k:12.45"/>
+                <use href="#lamp-prism" transform="translate(558 313) rotate(69)" style="--k:13.45"/>
+                <use href="#lamp-prism" transform="translate(542 347) rotate(53)" style="--k:14.45"/>
+                <use href="#lamp-prism" transform="translate(516 365) rotate(29)" style="--k:15.45"/>
+                <use href="#lamp-prism" transform="translate(480 385) rotate(-24)" style="--k:16.45"/>
+                <use href="#lamp-prism" transform="translate(441 400) rotate(-16)" style="--k:17.45"/>
+                <use href="#lamp-prism" transform="translate(398 409) rotate(-15)" style="--k:18.45"/>
+                <use href="#lamp-prism" transform="translate(351 417) rotate(-10)" style="--k:19.45"/>
+                <use href="#lamp-prism" transform="translate(324 425) rotate(-12)" style="--k:20.45"/>
+            </svg>
             <div class="mechanism" aria-hidden="true">
               <div class="wing-port"><div class="wing-arm"><svg viewBox="0 0 190 100"><use href="#wing-base"/><g class="wing-joint"><use href="#wing-tip"/></g></svg></div></div>
               <div class="wing-port starboard"><div class="wing-arm"><svg viewBox="0 0 190 100"><use href="#wing-base"/><g class="wing-joint"><use href="#wing-tip"/></g></svg></div></div>
@@ -108,19 +162,20 @@
     <p><b>디버그 메뉴</b>기체 아래의 ‘항상 당첨’을 켜면 결과가 나오기 전인 추첨에서 대당첨 연출을 확인할 수 있습니다. 켜 둔 채 초회 보너스를 마치면 ST로 진입하고, 오른쪽 입상으로 연속 당첨을 시험할 수 있습니다. 기본 설정은 꺼짐입니다.</p>
     <p class="sound-credits">구슬 소리 원음 · <a href="https://freesound.org/people/rubberduckie/sounds/639646/">rubberduckie</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>), <a href="https://freesound.org/people/Ted_Erski/sounds/535286/">Ted_Erski</a> (CC0). 원음에서 구름음과 충돌음을 발췌하고 음량을 조정했습니다.</p><button id="close" type="button">플레이로 돌아가기</button>
   </dialog>
-  <script src="ball-audio.js?v=stage13"></script>
-  <script src="tray.js?v=stage13"></script>
-  <script src="battle.js?v=stage13"></script>
-  <script src="handle.js?v=stage13"></script>
-  <script src="fieldwork.js?v=stage13"></script>
-  <script src="flow.js?v=stage13"></script>
-  <script src="bank.js?v=stage13"></script>
-  <script src="reels.js?v=stage13"></script>
-  <script src="contacts.js?v=stage13"></script>
-  <script src="rush.js?v=stage13"></script>
-  <script src="rush-screen.js?v=stage13"></script>
-  <script src="bezel.js?v=stage13"></script>
-  <script src="stage.js?v=stage13"></script>
-  <script src="game.js?v=stage13"></script>
+  <script src="ball-audio.js?v=prism15"></script>
+  <script src="tray.js?v=prism15"></script>
+  <script src="battle.js?v=prism15"></script>
+  <script src="handle.js?v=prism15"></script>
+  <script src="fieldwork.js?v=prism15"></script>
+  <script src="flow.js?v=prism15"></script>
+  <script src="bank.js?v=prism15"></script>
+  <script src="reels.js?v=prism15"></script>
+  <script src="contacts.js?v=prism15"></script>
+  <script src="rush.js?v=prism15"></script>
+  <script src="rush-screen.js?v=prism15"></script>
+  <script src="bezel.js?v=prism15"></script>
+  <script src="stage.js?v=prism15"></script>
+  <script src="striker.js?v=prism15"></script>
+  <script src="game.js?v=prism15"></script>
 </body>
 </html>

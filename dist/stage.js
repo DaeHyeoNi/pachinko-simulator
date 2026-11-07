@@ -3,6 +3,9 @@
 // The lower deck is behind the nails. x runs across the bowl and z runs
 // forward, from the warp outlet to the spill lip facing the player.
 const stageDeck={left:188,right:412,center:300,depth:29};
+// The throat is recessed in the front third of the deck. Balls can bridge
+// its flared inlet on a fast pass, or roll past it if another ball occupies it.
+const stageThroat={halfWidth:6,back:15,front:27,maxCrossSpeed:239};
 const warpMouth={x:94,y:270,halfWidth:8.6};
 const warpPath=[[warpMouth.x,warpMouth.y],[100,279],[106,303],[118,318],[143,339],[165,355],[188,372]];
 const warpLengths=warpPath.slice(1).map(([x,y],i)=>Math.hypot(x-warpPath[i][0],y-warpPath[i][1]));
@@ -82,7 +85,8 @@ function moveStageBall(ball,dt,balls){
     ball.vz+=(5.2-.18*ball.vz)*dt;
     // The center groove only catches a ball crossing its opening at the back
     // of the spout. An earlier or faster pass keeps rolling on the main deck.
-    if(Math.abs(dx)<6 && ball.z>=13 && ball.z<25 && Math.abs(ball.vx)<186 &&
+    if(Math.abs(dx)<stageThroat.halfWidth && ball.z>=stageThroat.back &&
+      ball.z<stageThroat.front && Math.abs(ball.vx)<stageThroat.maxCrossSpeed &&
       !balls.some(other=>other!==ball && other.route==='stage' && other.inGroove)){
       ball.inGroove=true;ball.vx*=.09;
     }
@@ -149,7 +153,9 @@ function drawStageHardware(c){
   c.beginPath();rim(4);c.lineWidth=.9;c.strokeStyle='#f6ffffbf';c.stroke();
   c.beginPath();rim(17);c.strokeStyle='#cff3f64f';c.stroke();
   const center=stageDeck.center;
-  c.beginPath();c.moveTo(center-7,405);c.lineTo(center-6,422);c.quadraticCurveTo(center,427,center+6,422);c.lineTo(center+7,405);
+  const inletY=deckHeight(center,stageThroat.back)+5;
+  const inletWidth=stageThroat.halfWidth+2;
+  c.beginPath();c.moveTo(center-inletWidth,inletY);c.lineTo(center-6,422);c.quadraticCurveTo(center,427,center+6,422);c.lineTo(center+inletWidth,inletY);
   c.fillStyle='#284451bb';c.fill();c.strokeStyle='#c5dce9';c.stroke();
   c.restore();
 }

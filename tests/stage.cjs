@@ -28,6 +28,17 @@ for(const vx of [-120,-70,-25,0,45,90,140]){
   }
 }
 assert.equal(reversed,21);assert.equal(outcomes.size,2);
+// A full-speed warp discharge with forward roll reaches the flared inlet
+// on the return pass. A shallower discharge carries on over the front lip.
+for(const [forwardSpeed,expectGroove] of [[12,true],[6,false]]){
+  const ball={};
+  stage.enterStage(ball,188,0,207.5,forwardSpeed);
+  for(let step=0;step<1200 && ball.route==='stage';step++)stage.moveStageBall(ball,1/120,[ball]);
+  assert.equal(ball.route,'field');
+  assert.equal(ball.inGroove,expectGroove);
+  if(expectGroove)assert(Math.abs(ball.x-300)<1 && Math.abs(ball.vx)<1);
+  else assert(Math.abs(ball.vx)>50);
+}
 const a={},b={};
 stage.enterStage(a,285,11,50,1);
 stage.enterStage(b,294,11,-50,1);

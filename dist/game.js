@@ -12,6 +12,8 @@ let stock=0, shots=0, hits=0, wins=0, now=0, lastShot=-1;
 let sound=false, ac, force=0, mode='empty', insertion=0, payout=0, payoutClock=0, rightHits=0;
 let warningUntil=0, warningMessage='', activeDraw=null, waiting=[];
 let balls=[];
+const striker={loadedAt:null,compression:0,release:null};
+const shotInterval=.60,releaseTime=5/120;
 const field=createFieldwork();
 const pegs=field.pegs;
 const bank=new BanknoteAcceptor();
@@ -95,6 +97,7 @@ const launchGroove=launchTrack(),launchGlassLip=launchTrack(5.4);
 function drawCoveredLaunch(){
   g.save();g.lineCap='round';
   g.strokeStyle='#171b20b0';g.lineWidth=12;g.stroke(launchGroove);
+  drawLaunchSpring(g,launcher.startY,striker,now,tray);
   for(const b of balls){
     if(!b.launch)continue;
     g.globalAlpha=.84;tray.drawPlayfieldBall(g,b);
@@ -187,7 +190,6 @@ function drawGates(){
 }
 function draw(){let d=Math.min(2,devicePixelRatio||1),size=Math.max(1,Math.round(cv.clientWidth*d));if(cv.width!==size){cv.width=cv.height=size}g.setTransform(size/600,0,0,size/600,0,0);g.clearRect(0,0,600,600);
 let sh=g.createRadialGradient(300,260,170,300,280,390);sh.addColorStop(0,'#0c080800');sh.addColorStop(1,'#120c09c9');g.fillStyle=sh;g.fillRect(0,0,600,600);
-drawCoveredLaunch();
 drawDisplay();
 drawStageHardware(g);
 for(const ball of balls){
@@ -195,6 +197,9 @@ for(const ball of balls){
 }
 drawStageGlass(g);
 drawFieldwork(g,field,now);
+// The launcher inspection window and vertical guide are mounted in front of
+// the metal apron. Incoming balls stay visible all the way from the striker.
+drawCoveredLaunch();
 // Only the opening between the two gold nails accepts a start ball.
 const mouth=field.heso;
 box(mouth.x-15,mouth.y+7,30,13,4,'#302e30','#bb935e');
@@ -273,15 +278,46 @@ function updateWarning(){
   if(value && el.textContent!==value)el.textContent=value;
   el.hidden=!value;
 }
-function fire(){
-  if(!stock||!force||insertion||mode==='empty'||$('guide').open)return;
-  // A weak shot drops back through the launch throat before the next ball seats.
-  if(balls.some(ball=>ball.launch && ball.head<riseToBend) || !tray.take())return;
-  stock--;shots++;lastShot=now;
-  const right=force>=95;
+function seatBall(){
+  if(striker.loadedAt!==null)return true;
+  if(balls.some(ball=>ball.launch && ball.head<riseToBend) || !tray.take())return false;
+  striker.loadedAt=now;
+  stock--;
+  status();
+  return true;
+}
+function fire(stroke=force){
+  if((!stock && striker.loadedAt===null)||!stroke||insertion||mode==='empty'||$('guide').open||!seatBall())return;
+  striker.loadedAt=null;
+  shots++;lastShot=now;
+  const right=stroke>=95;
   if(right && mode==='normal')warn('◀ 좌타로 돌리세요 · 구슬 반환');
-  balls.push(springShot(force,rand(),mode==='right'||mode==='support'?'attacker':'return'));
+  balls.push(springShot(stroke,rand(),mode==='right'||mode==='support'?'attacker':'return'));
   BallAudio.launch(sound?ac:null);status();
+}
+function advanceStriker(dt){
+  if(striker.release){
+    const {start,travel,stroke}=striker.release;
+    const t=Math.min(1,(now-start+1e-9)/releaseTime);
+    // First quarter-period of a released coil, ending in contact with the ball.
+    striker.compression=travel*Math.cos(t*Math.PI/2);
+    if(t===1){
+      striker.release=null;
+      striker.compression=0;
+      fire(stroke);
+    }
+    return;
+  }
+  const canWind=(stock || striker.loadedAt!==null) && force && !insertion && mode!=='empty' && !$('guide').open &&
+    now-lastShot>=.15 && seatBall();
+  // Compression is proportional to the square root of the ball's launch energy.
+  const target=canWind?19*Math.sqrt(launchEnergy(force,.5)/launchEnergy(100,.5)):0;
+  const delta=target-striker.compression;
+  striker.compression+=Math.sign(delta)*Math.min(Math.abs(delta),dt*(canWind?72:52));
+  if(canWind && Math.abs(target-striker.compression)<.01 && now-striker.loadedAt>=.23 &&
+      now-lastShot+1e-9>=shotInterval-releaseTime){
+    striker.release={start:now,travel:striker.compression,stroke:force};
+  }
 }
 // Each entry queues a complete presentation alongside its independently drawn outcome.
 const battleScenes = ['검격 결투','에너지 포격전','궤도 미사일 요격','공중 추격전','전자기 역습','장갑열차 공성전'];
@@ -514,7 +550,7 @@ function finishBallStep(b,dt){
 }
 function step(dt){
   now+=dt;advanceAttacker();advanceTray(dt);
-  if(force && now-lastShot>=.60)fire();
+  advanceStriker(dt);
   advancePlayfield(dt);
   for(const p of pegs)p.light=Math.max(0,p.light-dt);
   advanceBattle(dt);advanceSupport();updateWarning();
@@ -532,12 +568,54 @@ function advancePlayfield(dt){
   }
 }
 let last=performance.now(),acc=0;
+const quietCabinet=typeof matchMedia==='function' && matchMedia('(prefers-reduced-motion: reduce)');
+let winCycleStarted=null;
+function moveWinMechanism(fx){
+  const style=cabinet.style;
+  if(fx==='idle'){
+    if(winCycleStarted!==null){
+      for(const name of ['--win-beat','--win-phase','--prop-stroke','--prop-wing','--prop-tip'])
+        style.removeProperty(name);
+      winCycleStarted=null;
+    }
+    return;
+  }
+  if(winCycleStarted===null)winCycleStarted=now;
+  const set=(name,value)=>style.setProperty(name,value.toFixed(4));
+  if(quietCabinet.matches){
+    set('--win-beat',0);set('--win-phase',0);set('--prop-stroke',.39);set('--prop-wing',.32);set('--prop-tip',.32);
+    return;
+  }
+  // The motor takes the crest back up more slowly than gravity drops it.
+  // Keep a single cycle across the reel lock and subsequent payout rounds.
+  const phase=((now-winCycleStarted)/2.85)%1;
+  function ramp(from,to){
+    const t=Math.max(0,Math.min(1,(phase-from)/(to-from)));
+    return t*t*(3-2*t);
+  }
+  const impact=.235;
+  let carriage;
+  if(phase<impact){
+    const drop=Math.max(0,(phase-.055)/(impact-.055));
+    carriage=drop*drop;
+  }else{
+    const dt=(phase-impact)*2.85;
+    carriage=(1-.085*Math.exp(-dt*8)*Math.sin(dt*29))*(1-ramp(.46,.78));
+  }
+  const beat=phase<impact?0:Math.exp(-(phase-impact)*23);
+  set('--prop-stroke',carriage);
+  set('--prop-wing',ramp(.035,.245)*(1-ramp(.49,.79)));
+  set('--prop-tip',ramp(.12,.29)*(1-ramp(.45,.71)));
+  set('--win-phase',phase);
+  set('--win-beat',beat);
+}
 function frame(ms){
   acc+=Math.min(.06,(ms-last)/1000);last=ms;
   while(acc>=1/120){step(1/120);acc-=1/120}
   const winning=activeDraw?.won && activeDraw.elapsed>=reelStopTime(activeDraw) || supportSpin?.won && now-supportSpin.started>=1.7;
   const fx=winning?'jackpot':mode==='right'?'payout':'idle';
   if(cabinet.dataset.fx!==fx)cabinet.dataset.fx=fx;
+  moveWinMechanism(fx);
   const reach=isReachLive(activeDraw)?'on':'off';
   if(cabinet.dataset.reach!==reach)cabinet.dataset.reach=reach;
   const ready=chanceIsReady(activeDraw);

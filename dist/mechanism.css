@@ -1,0 +1,19 @@
+/* The crown slides on two rods while the two-piece arms swing into the LCD
+   window from their own pivots. Both sides use the same mechanical stroke. */
+.cabinet:is([data-fx="jackpot"],[data-fx="payout"]) .wing-arm{
+  transform:translate(calc(-12% + 28% * var(--prop-wing,0)),calc(-33% + 53% * var(--prop-wing,0)))
+    rotate(calc(-62deg + 76deg * var(--prop-wing,0)));
+}
+.cabinet:is([data-fx="jackpot"],[data-fx="payout"]) .wing-joint{
+  transform:rotate(calc(-62deg + 70deg * var(--prop-tip,0)));
+}
+.cabinet:is([data-fx="jackpot"],[data-fx="payout"]) .crest-rail{
+  transform:translateY(calc(-100% + 207% * var(--prop-stroke,0)));
+}
+.crest-rail::before,.crest-rail::after{
+  content:"";position:absolute;bottom:81%;left:25%;width:6%;height:152%;
+  background:linear-gradient(90deg,#26343f,#748ea1 16%,#deedf4 42%,#8799a5 62%,#303a47 82%,#6f8792);
+  border-radius:0 0 2px 2px;
+}
+.crest-rail::after{left:auto;right:25%}
+.crest-rail svg{position:relative;z-index:1}

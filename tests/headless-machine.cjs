@@ -11,7 +11,7 @@ module.exports=function loadMachine(experiment,revision){
   }
   const files=['fieldwork.js','contacts.js','flow.js'];
   const index=read('index.html');
-  for(const optional of ['bezel.js','stage.js'])if(index.includes('src="'+optional))files.push(optional);
+  for(const optional of ['bezel.js','stage.js','striker.js'])if(index.includes('src="'+optional))files.push(optional);
   const source=[...files,'game.js'].map(read).join('\n');
   const empty = ()=>{};
   const element = {getContext:empty,querySelectorAll:()=>[],setAttribute:empty};
