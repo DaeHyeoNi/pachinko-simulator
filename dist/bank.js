@@ -82,19 +82,6 @@ class BanknoteAcceptor {
     this.lastFrame=-1;this.overlay.hidden=false;this.render(0);
   }
   close(){this.overlay.hidden=true}
-  motor(audio){
-    if(!audio)return;
-    const start=audio.currentTime, motor=audio.createOscillator(), lowpass=audio.createBiquadFilter(), gain=audio.createGain();
-    motor.type='sawtooth';motor.frequency.setValueAtTime(63,start);
-    motor.frequency.exponentialRampToValueAtTime(113,start+.12);
-    motor.frequency.exponentialRampToValueAtTime(78,start+1.31);
-    lowpass.frequency.value=560;
-    gain.gain.setValueAtTime(.001,start);gain.gain.linearRampToValueAtTime(.026,start+.09);
-    gain.gain.exponentialRampToValueAtTime(.001,start+1.37);
-    motor.connect(lowpass);lowpass.connect(gain);gain.connect(audio.destination);
-    motor.start(start);motor.stop(start+1.38);
-  }
-
   render(time){
     const frame=Math.floor(time*60);
     if(frame===this.lastFrame)return;

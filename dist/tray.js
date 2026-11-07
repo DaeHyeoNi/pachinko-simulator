@@ -9,16 +9,38 @@ class BallTray {
     this.balls = [];
     this.feed = [];
     this.cells = new Map();
+    this.outlet = {x: 529, z: 117};
+    this.race=[];
     this.accumulator = 0;
     this.awake = 0;
     this.dirty = true;
-    this.ballRadius = 7.1;
+    this.ballRadius = 6.35;
+    this.binSize = this.ballRadius*3.25;
     this.sequence = 0;
     this.sprites = Array.from({length: 12}, (_, index) => this.makeSteel(index));
     this.shell = this.makeShell();
+    if(typeof Image!=='undefined'){
+      const hardware=new Image();
+      hardware.onload=()=>this.useHardware(hardware);
+      hardware.src='receiving-tray.webp';
+    }
   }
 
-  makeSteel(index) {
+  useHardware(image) {
+    this.shell=image;
+    const thumb=document.createElement('canvas');
+    thumb.width=128;thumb.height=40;
+    const ctx=thumb.getContext('2d');
+    ctx.drawImage(image,0,0,128,40);
+    // file:// previews may allow drawing the asset but restrict pixel reads.
+    try{
+      const reflection=ctx.getImageData(0,0,128,40).data;
+      this.sprites=this.sprites.map((_,index)=>this.makeSteel(index,reflection));
+    }catch{}
+    this.dirty=true;
+  }
+
+  makeSteel(index,reflection) {
     const sprite = document.createElement('canvas');
     sprite.width = sprite.height = 64;
     const ctx = sprite.getContext('2d');
@@ -49,6 +71,12 @@ class BallTray {
           if (latitude>horizon-.28) rgb=[24,27,26];
           if (latitude<-.66) rgb=[113,111,105];
           if (Math.abs(latitude+.47+.09*Math.sin(longitude*2))<.065) rgb=[205,150,143];
+          if(reflection){
+            const px=Math.max(0,Math.min(127,Math.floor(64+53*Math.sin(longitude+index*.18))));
+            const py=Math.max(0,Math.min(39,Math.floor(19+17*Math.sin(-latitude*2+longitude))));
+            const sample=(py*128+px)*4;
+            rgb=rgb.map((v,c)=>v*.63+reflection[sample+c]*.37);
+          }
         }
         const rim = clamp((.25-nz)*4);
         const specular = Math.exp(-105*((nx+.31+.09*Math.sin(index))**2+(ny-.54)**2));
@@ -94,8 +122,8 @@ class BallTray {
     const floor = 'M56 60 Q99 51 160 52 L455 52 Q520 51 551 57 L543 110 Q538 125 525 129 Q473 139 433 138 L156 138 Q99 139 67 129 Q57 126 53 112 L46 73 Q45 64 56 60 Z';
     path(floor,vertical(51,139,[[0,'#66121d'],[.32,'#9b2a37'],[.64,'#8d2330'],[1,'#781722']]),'#5d0c1788',1.2);
     for(let i=0;i<8;i++){
-      const y=67+i*8;
-      path('M79 '+y+' Q221 '+(y-5)+' 405 '+(y-2)+' Q476 '+y+' 522 '+(y-4),null,'#f07e841c',1.4);
+      const y=61+i*8;
+      path('M79 '+y+' Q210 '+(y+1)+' 382 '+(y+9)+' Q471 '+(y+13)+' 522 '+(y+11),null,'#f07e841c',1.4);
     }
     path('M32 45 Q69 34 149 37 M458 37 Q529 35 569 42 M8 54 L16 122 Q19 144 37 149 Q76 161 151 159 M449 158 Q534 159 570 145 Q583 138 585 124',null,'#ff999d9c',1.3);
     path('M23 86 Q29 124 36 131 Q45 142 71 146 L112 151 Q65 148 44 142 Q29 137 26 121 Z','#fba1a52d');
@@ -113,104 +141,253 @@ class BallTray {
   }
 
   dropBall() {
-    // Fast occasional ricochets off the spout escape the dense main stream.
-    const ricochet = Math.random() < .13;
-    this.balls.push({
-      x: 97+(Math.random()-.5)*32, z: 5+Math.random()*16, y: 39+Math.random()*4,
-      vx: ricochet ? 215+Math.random()*385 : 22+Math.random()**1.6*260,
-      vz: 18+Math.random()*118, vy: -10-Math.random()*35,
-      finish: this.sequence++ % this.sprites.length
-    });
-    this.awake = 3;
+    // A congested chute delays the next release until there is clear space.
+    // Never start two physical balls inside one another.
+    for(let attempt=0;attempt<9;attempt++){
+      const ball={
+        x:80+Math.random()*44,z:8+Math.random()*22,y:29+Math.random()*13,
+        vx:35+Math.random()**1.5*345,vz:18+Math.random()*145,vy:-12-Math.random()*30,
+        finish:this.sequence%this.sprites.length
+      };
+      if(!this.hasClearance(ball))continue;
+      this.sequence++;
+      this.balls.push(ball);
+      this.putInBin(ball);
+      this.awake=7;
+      return true;
+    }
+    return false;
   }
 
   take() {
-    if (this.count === 0) return false;
-    this.dirty = true;
-    this.count--;
-    let index=0, best=Infinity;
-    for(let i=0;i<this.balls.length;i++){
-      const ball=this.balls[i];
-      const distance=(525-ball.x)**2+(93-ball.z)**2+ball.y**2;
-      if(distance<best){best=distance;index=i;}
+    if(!this.count || this.feed.length)return false;
+    const lead=this.race[0];
+    const ready=lead && lead.entry===1 && lead.x>=this.outlet.x-.45;
+    const ball=ready ? lead : this.balls.find(candidate=>!candidate.race &&
+      candidate.y<this.ballRadius+1 && Math.hypot(candidate.x-this.outlet.x,candidate.z-this.outlet.z)<8);
+    if(!ball){
+      this.awake=Math.max(this.awake,1);
+      return false;
     }
-    const [ball]=this.balls.splice(index,1);
-    this.feed.push({...this.project(ball), finish:ball.finish, t:0});
-    if(this.balls.length < Math.min(this.count,this.capacity)) this.dropBall();
-    this.awake=3;
+    if(ready)this.race.shift();
+    this.balls.splice(this.balls.indexOf(ball),1);
+    this.removeFromBin(ball);
+    this.feed.push({...this.project(ball),finish:ball.finish,t:0});
+    this.count--;this.dirty=true;this.awake=7;
+    if(this.balls.length<Math.min(this.capacity,this.count))this.dropBall();
     return true;
   }
 
   project(ball) {
-    const depth = Math.max(0,Math.min(1,ball.z/110));
-    const scale = .92+.13*depth;
-    return {x:300+(ball.x-300)*scale, y:49+ball.z*.76-ball.y*.78, scale};
+    const depth=Math.max(0,Math.min(1,ball.z/124));
+    const scale=.91+.14*depth;
+    const x=300+(ball.x-300)*scale-17*Math.max(0,(ball.x-165)/364);
+    if(ball.race){
+      const t=ball.entry;
+      const targetX=522+(ball.x-this.outlet.x)*1.015;
+      const targetY=127+(ball.x-this.outlet.x)*.029;
+      return {x:ball.entryX+(targetX-ball.entryX)*t,y:ball.entryY+(targetY-ball.entryY)*t*t,scale};
+    }
+    return {x,y:61+ball.z*.54-ball.y*.57-(532-ball.x)*.012+4.5*depth,scale};
   }
 
-  constrain(ball,dt) {
-    const radius=this.ballRadius;
-    const z=Math.max(radius,Math.min(110-radius,ball.z));
-    if(z!==ball.z){ball.vz*=-.42;ball.z=z;}
-    // A rounded, narrower front corner keeps the pile inside the molded basin.
-    const wall=41+18*(Math.abs((ball.z-55)/55)**2);
-    const left=wall+radius,right=600-left;
-    if(ball.x<left||ball.x>right){ball.x=Math.max(left,Math.min(right,ball.x));ball.vx*=-.42;}
-    // The floor slopes into an off-center curved groove. It collects loose
-    // balls toward the middle depth, so the heap does not fill wall to wall.
-    const groove = 48+22*Math.sin(ball.x*.014)+8*Math.sin(ball.x*.029);
-    const fromGroove = ball.z-groove;
-    const floor = radius+.0045*fromGroove*fromGroove;
-    if(ball.y<floor){
-      ball.y=floor;
-      ball.vy=ball.vy < -24 ? -ball.vy*.31 : 0;
-      ball.vz-=fromGroove*.009*780*dt;
-      const friction=Math.exp(-(Math.abs(ball.vx)>200 ? 1.5 : 5.4)*dt);
+  floorAt(x,z) {
+    // The molded final race drops into the throat. Unlike a flat pocket,
+    // its downhill face lets the leading sphere roll clear of a lateral arch.
+    const behindLip=this.frontLip(x)-z;
+    return this.ballRadius+Math.max(0,Math.min(2.8,(behindLip-18)*.06));
+  }
+
+  key(ball) {
+    const size=this.binSize;
+    return Math.floor(ball.x/size)+Math.floor(ball.z/size)*64+Math.floor(ball.y/size)*1024;
+  }
+
+  putInBin(ball) {
+    ball.bin=this.key(ball);
+    if(!this.cells.has(ball.bin))this.cells.set(ball.bin,[]);
+    this.cells.get(ball.bin).push(ball);
+  }
+
+  removeFromBin(ball) {
+    const bin=this.cells.get(ball.bin);
+    const i=bin.indexOf(ball);
+    bin[i]=bin[bin.length-1];bin.pop();
+  }
+
+  hasClearance(ball,ignore=null) {
+    const diameter=this.ballRadius*2+(ignore?.00005:.002);
+    const key=this.key(ball);
+    for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++)for(let x=-1;x<=1;x++){
+      const bin=this.cells.get(key+y*1024+z*64+x);
+      if(!bin)continue;
+      for(const other of bin){
+        if(other===ignore)continue;
+        const dx=ball.x-other.x,dy=ball.y-other.y,dz=ball.z-other.z;
+        if(dx*dx+dy*dy+dz*dz < diameter*diameter)return false;
+      }
+    }
+    return true;
+  }
+
+  move(ball,dt) {
+    const radius=this.ballRadius,diameter=2*radius+.0003;
+    const startX=ball.x,startY=ball.y,startZ=ball.z;
+    let contacted=false;
+    // World Y is measured normal to the inclined floor. Its downhill gravity
+    // component carries the steel balls toward the right-hand discharge.
+    ball.vy-=760*dt;
+    const gx=this.outlet.x-ball.x,gz=this.outlet.z-ball.z;
+    const distance=Math.max(1,Math.hypot(gx,gz));
+    const acceleration=distance<85 ? 180 : 84;
+    ball.vx+=acceleration*gx/distance*dt;
+    ball.vz+=acceleration*gz/distance*dt;
+    if(ball.y<this.floorAt(ball.x,ball.z)+.14){
+      const friction=Math.exp(-.54*dt);
       ball.vx*=friction;ball.vz*=friction;
     }
-  }
-
-  integrate(dt) {
-    for(const ball of this.balls){
-      ball.vy-=780*dt;
-      ball.vx+=4*dt;
-      ball.vz+=7*dt;
-      ball.x+=ball.vx*dt;ball.y+=ball.vy*dt;ball.z+=ball.vz*dt;
-      this.constrain(ball,dt);
-    }
-    const diameter=2*this.ballRadius;
-    // Reuse bins each step; no all-pairs pass as the tray fills.
-    for(const bin of this.cells.values()) bin.length=0;
-    for(const ball of this.balls){
-      const ix=Math.floor(ball.x/diameter),iz=Math.floor(ball.z/diameter),iy=Math.floor(ball.y/diameter);
-      for(let dz=-1;dz<=1;dz++){
-        for(let dy=-1;dy<=1;dy++){
-          const row=ix+(iz+dz)*64+(iy+dy)*1024;
-          for(let dx=-1;dx<=1;dx++){
-            const bin=this.cells.get(row+dx);
-            if(!bin)continue;
-            for(const other of bin){
-              const x=ball.x-other.x,y=ball.y-other.y,z=ball.z-other.z;
-              const squared=x*x+y*y+z*z;
-              if(squared>=diameter*diameter||squared<.000001)continue;
-              const distance=Math.sqrt(squared),nX=x/distance,nY=y/distance,nZ=z/distance;
-              const overlap=(diameter-distance)*.48;
-              ball.x+=nX*overlap;other.x-=nX*overlap;
-              ball.y+=nY*overlap;other.y-=nY*overlap;
-              ball.z+=nZ*overlap;other.z-=nZ*overlap;
-              const speed=(ball.vx-other.vx)*nX+(ball.vy-other.vy)*nY+(ball.vz-other.vz)*nZ;
-              if(speed>=0)continue;
-              const impulse=-.56*speed;
-              ball.vx+=nX*impulse;other.vx-=nX*impulse;
-              ball.vy+=nY*impulse;other.vy-=nY*impulse;
-              ball.vz+=nZ*impulse;other.vz-=nZ*impulse;
-            }
+    const steps=Math.max(1,Math.ceil(Math.hypot(ball.vx,ball.vy,ball.vz)*dt/(.65*radius)));
+    for(let n=0;n<steps;n++){
+      const tick=dt/steps;
+      let dx=ball.vx*tick,dy=ball.vy*tick,dz=ball.vz*tick;
+      for(let iteration=0;iteration<3;iteration++){
+        // Project proposed travel onto the molded chamber's boundary.
+        const front=117.6+Math.min(0,(ball.x-529)*.043);
+        const z=Math.max(radius,Math.min(front,ball.z+dz));
+        const wall=33+18*((z-62)/62)**2+radius;
+        // The guide widens slightly toward the outlet, preventing a stable
+        // arch between an inward-sloping wall and the last ball in a row.
+        const right=Math.min(600-wall,529+(z-117)*.085);
+        const x=Math.max(wall,Math.min(right,ball.x+dx));
+        const y=Math.max(this.floorAt(x,z),ball.y+dy);
+        if(z!==ball.z+dz)ball.vz*=-.18;
+        if(x!==ball.x+dx)ball.vx*=-.18;
+        if(y!==ball.y+dy)ball.vy=ball.vy < -32 ? -ball.vy*.29 : 0;
+        dx=x-ball.x;dy=y-ball.y;dz=z-ball.z;
+        const travel=dx*dx+dy*dy+dz*dz;
+        if(travel<1e-10)break;
+        let fraction=1,obstacle=null;
+        const key=this.key(ball);
+        for(let cy=-1;cy<=1;cy++)for(let cz=-1;cz<=1;cz++)for(let cx=-1;cx<=1;cx++){
+          const bin=this.cells.get(key+cy*1024+cz*64+cx);
+          if(!bin)continue;
+          for(const other of bin){
+            if(other===ball)continue;
+            const ox=ball.x-other.x,oy=ball.y-other.y,oz=ball.z-other.z;
+            const approach=dx*ox+dy*oy+dz*oz;
+            if(approach>=0)continue;
+            const clearance=ox*ox+oy*oy+oz*oz-diameter*diameter;
+            const discriminant=approach*approach-travel*clearance;
+            if(discriminant<0)continue;
+            const hit=Math.max(0,(-approach-Math.sqrt(discriminant))/travel);
+            if(hit<fraction){fraction=hit;obstacle=other;}
           }
         }
+        // Sweep against static positions before committing. Later movers see
+        // this position through the same spatial index in the very same step.
+        const safe=Math.max(0,fraction-.000001);
+        ball.x+=dx*safe;ball.y+=dy*safe;ball.z+=dz*safe;
+        if(this.key(ball)!==ball.bin){this.removeFromBin(ball);this.putInBin(ball);}
+        if(!obstacle)break;
+        contacted=true;
+        const ox=ball.x-obstacle.x,oy=ball.y-obstacle.y,oz=ball.z-obstacle.z;
+        const distance=Math.hypot(ox,oy,oz);
+        const nx=ox/distance,ny=oy/distance,nz=oz/distance;
+        const relative=(ball.vx-obstacle.vx)*nx+(ball.vy-obstacle.vy)*ny+(ball.vz-obstacle.vz)*nz;
+        if(relative<0){
+          const impulse=-relative*(relative < -32 ? .58 : .50);
+          ball.vx+=nx*impulse;ball.vy+=ny*impulse;ball.vz+=nz*impulse;
+          obstacle.vx-=nx*impulse;obstacle.vy-=ny*impulse;obstacle.vz-=nz*impulse;
+        }
+        const tangent=dx*nx+dy*ny+dz*nz;
+        dx=(dx-nx*tangent)*(1-fraction);
+        dy=(dy-ny*tangent)*(1-fraction);
+        dz=(dz-nz*tangent)*(1-fraction);
       }
-      const cell=ix+iz*64+iy*1024;
-      if(!this.cells.has(cell))this.cells.set(cell,[]);
-      this.cells.get(cell).push(ball);
     }
+    if(contacted){
+      // A supported ball has no falling speed. Retaining velocity that the
+      // contact actually prevented lets an idle pile accumulate false energy.
+      const observed=.45/dt;
+      ball.vx=ball.vx*.55+(ball.x-startX)*observed;
+      ball.vy=ball.vy*.55+(ball.y-startY)*observed;
+      ball.vz=ball.vz*.55+(ball.z-startZ)*observed;
+    }
+  }
+
+  frontLip(x) {
+    return 117.6+Math.min(0,(x-529)*.043);
+  }
+
+  fillRace() {
+    if(this.race.length>=6)return;
+    const spacing=2*this.ballRadius+.35;
+    let chosen=null;
+    for(const ball of this.balls){
+      if(ball.race || ball.x>this.outlet.x+.4 || ball.y>this.ballRadius+.10)continue;
+      if(ball.z<this.frontLip(ball.x)-this.ballRadius*1.35)continue;
+      if(this.race.some(other=>Math.abs(other.x-ball.x)<spacing))continue;
+      if(!chosen || ball.x>chosen.x)chosen=ball;
+    }
+    if(!chosen)return;
+    const p=this.project(chosen);
+    chosen.race=true;chosen.entry=0;chosen.entryX=p.x;chosen.entryY=p.y;
+    chosen.entryZ=chosen.z;chosen.entryHeight=chosen.y;chosen.vx=Math.max(0,Math.min(100,chosen.vx));
+    this.race.push(chosen);
+    this.race.sort((a,b)=>b.x-a.x);
+  }
+
+  settleFront(dt) {
+    // Resolve static friction against the tray's crossfall when a sparse
+    // residual pile interlocks. The frontmost ball has unobstructed downhill
+    // space ahead; roll it incrementally along the surface toward the rim.
+    if(this.race.length>2)return;
+    let leader=null,front=-Infinity;
+    for(const ball of this.balls){
+      if(ball.race)continue;
+      const z=ball.z-this.frontLip(ball.x);
+      if(z>front){front=z;leader=ball;}
+    }
+    if(!leader || front>=-this.ballRadius*.4)return;
+    const vz=Math.max(0,leader.crossfallSpeed||0);
+    const speed=Math.min(78,vz+95*dt);
+    const z=Math.min(this.frontLip(leader.x),leader.z+speed*dt);
+    const y=Math.max(this.floorAt(leader.x,z),leader.y-.12);
+    const next={x:leader.x,y,z};
+    if(!this.hasClearance(next,leader))return;
+    this.removeFromBin(leader);
+    leader.z=z;leader.y=y;leader.crossfallSpeed=speed;
+    this.putInBin(leader);
+  }
+
+  advanceRace(dt) {
+    // A recessed single-file channel spans the front rim. A sphere has to
+    // physically roll over that rim before gravity carries it to the gate.
+    // Settled balls queue a full diameter apart; removing the lead ball
+    // simply frees that length of channel for the next one to roll into.
+    let limit=this.outlet.x;
+    const spacing=2*this.ballRadius+.35;
+    for(const ball of this.race){
+      const entry=Math.min(1,ball.entry+dt/.21);
+      let x=ball.x;
+      if(entry===1){
+        ball.vx=Math.min(188,ball.vx+360*dt);
+        x=Math.min(limit,x+ball.vx*dt);
+        if(x===limit)ball.vx=0;
+      }
+      const destZ=this.frontLip(x)+this.ballRadius*1.75;
+      const fall=Math.min(1,entry*1.65);
+      const y=ball.entryHeight+(-this.ballRadius-1-ball.entryHeight)*fall*fall;
+      const z=ball.entryZ+(destZ-ball.entryZ)*Math.max(0,(entry-.61)/.39);
+      const target={x,y,z};
+      if(this.hasClearance(target,ball)){
+        this.removeFromBin(ball);
+        ball.x=x;ball.y=y;ball.z=z;ball.entry=entry;
+        this.putInBin(ball);
+      }
+      limit=ball.x-spacing;
+    }
+    this.fillRace();
   }
 
   advance(dt) {
@@ -218,12 +395,17 @@ class BallTray {
     if(this.awake>0){
       this.awake-=dt;this.accumulator+=Math.min(dt,.1);
       while(this.accumulator>=1/60){
-        this.integrate(1/60);
+        if(this.balls.length<Math.min(this.count,this.capacity))this.dropBall();
+        this.advanceRace(1/60);
+        for(let i=this.balls.length-1;i>=0;i--){
+          if(!this.balls[i].race)this.move(this.balls[i],1/60);
+        }
+        this.settleFront(1/60);
         this.accumulator-=1/60;
       }
     }
     for(const ball of this.feed)ball.t+=dt;
-    this.feed=this.feed.filter(ball=>ball.t<.34);
+    this.feed=this.feed.filter(ball=>ball.t<.16);
   }
 
   drawPlayfieldBall(ctx, ball) {
@@ -248,18 +430,24 @@ class BallTray {
     ctx.setTransform(width/600,0,0,height/164,0,0);
     ctx.clearRect(0,0,600,164);
     ctx.drawImage(this.shell,0,0,600,164);
+    // The clear acrylic lip separates the single-file race at the front
+    // from the reservoir. The channel converges on the dark outlet at right.
+    ctx.beginPath();
+    ctx.moveTo(48,109);ctx.bezierCurveTo(173,111,394,120,510,123);
+    ctx.strokeStyle='#39081270';ctx.lineWidth=2.4;ctx.stroke();
+    ctx.strokeStyle='#f1a3aa59';ctx.lineWidth=.7;ctx.stroke();
     const sorted=this.balls.slice().sort((a,b)=>(a.z+a.y*.72)-(b.z+b.y*.72));
     ctx.fillStyle='#2508134d';
     ctx.beginPath();
     for(const ball of sorted){
       const p=this.project(ball);
-      const foot=49+ball.z*.76;
+      const foot=61+ball.z*.54-(532-ball.x)*.012+4.5*ball.z/124;
       ctx.moveTo(p.x+8*p.scale,foot+2);
-      ctx.ellipse(p.x+2,foot+2,6.8*p.scale,2.5*p.scale,-.12,0,2*Math.PI);
+      ctx.ellipse(p.x+2,foot+2,5.7*p.scale,2.1*p.scale,-.12,0,2*Math.PI);
     }
     ctx.fill();
     const paint=(x,y,scale,finish)=>{
-      const edge=15.4*scale;
+      const edge=(2*this.ballRadius+.5)*scale;
       ctx.drawImage(this.sprites[finish],x-edge/2,y-edge/2,edge,edge);
     };
     for(const ball of sorted){
@@ -267,14 +455,15 @@ class BallTray {
       paint(p.x,p.y,p.scale,ball.finish);
     }
     for(const ball of this.feed){
-      const t=ball.t/.34;
+      const t=ball.t/.16;
       const ease=t*t;
-      paint(ball.x+(533-ball.x)*ease,ball.y+(122-ball.y)*ease,ball.scale*(1-.65*ease),ball.finish);
+      paint(ball.x+(522-ball.x)*ease,ball.y+(127-ball.y)*ease,ball.scale*(1-.65*ease),ball.finish);
     }
-    if(this.count>this.capacity){
+    const stored=this.count-this.balls.length;
+    if(stored>0){
       ctx.fillStyle='#161313db';ctx.fillRect(445,10,136,16);
       ctx.fillStyle='#e6cfc2';ctx.textAlign='right';ctx.font='11px sans-serif';
-      ctx.fillText('하부 저장통 +'+(this.count-this.capacity),575,22);
+      ctx.fillText('저장통 +'+stored,575,22);
     }
   }
 }

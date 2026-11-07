@@ -19,35 +19,51 @@ function createFieldwork() {
   function divider(x, y, flip = 1) {
     nail(x,y); nail(x-8*flip,y+15); nail(x+9*flip,y+21);
   }
-  // Short nail roads leave breaks for the ball to fall from one level to the next.
-  road(70,136,10,-7,5); road(130,109,12,-5,5);
-  road(196,88,13,-3,4); divider(262,91);
-  road(305,95,12,4,5); road(381,101,10,6.5,5);
-  road(452,134,9,8,4);
-  road(96,182,11,-4,5); divider(179,128);
-  road(207,136,10,4,4); road(270,147,13,-2,4);
-  road(348,138,11,3,5); divider(423,133,-1);
-  road(58,210,7,9,5); divider(120,226);
-  road(72,275,11,4,6);
-  road(72,318,8,-6,3); divider(103,331);
+  // Paired short roads alternate across the two narrow gutters around the LCD.
+  // The crown is left clear for the spring launch and its upper transfer track.
+  road(50,131,9,-6,5); road(83,154,-8,7,4);
+  road(38,189,9,4,6); road(78,220,-9,7,4);
+  road(39,253,10,5,5); road(82,278,-8,7,4);
+  road(48,311,9,7,4); divider(99,326);
   road(68,358,9.5,5.7,7); road(162,409,10.8,4.5,9);
-  road(467,200,10,6.5,5); road(467,235,7,9,3);
-  road(527,254,-9,6,5); divider(475,292,-1);
-  road(525,307,-8,7,5); road(484,338,-7,8,3);
+  road(506,132,9,7,5); road(553,174,-10,6,5);
+  road(511,210,9,6,5); road(566,240,-10,6,5);
+  road(511,280,9,6,5); road(556,315,-9,6,4);
+  road(489,336,-8,7,4);
   road(511,359,-10,5,6); divider(441,396,-1);
   // The two independently pitched banks below the LCD feed the start-pocket area.
   road(89,399,11.2,5.4,7); divider(104,437);
   road(139,459,11.4,4.9,6);
-  road(210,478,11.75,3,6);
+  road(210,478,11.75,3,8);
   road(493,406,-11,5.4,6); road(414,432,-10.5,3.8,6);
-  road(465,457,-11,5.1,5); road(395,478,-11.7,3,6);
+  road(465,457,-11,5.1,5); road(395,478,-11.7,3,8);
   divider(242,397); divider(349,406,-1);
   nail(280,459); nail(317,449); nail(294,423);
   // Two actual brass nails frame the narrow mouth above the single heso.
   nail(287.5,511,2.85,-.8); nail(312.5,511,2.85,.8);
-  rails.push([35,237,51,270],[27,340,51,374],[62,446,92,466],[529,421,505,445]);
+  rails.push([27,340,51,374],[62,446,92,466],[529,421,505,445]);
+  // This single open-ended chain goes up the left wall, around the glass and
+  // down the right wall. Its only opening is the bottom drain throat.
+  const drain={x:300, y:586, halfWidth:19};
+  const leftSkirt=[[281,594],[281,576],[265,566],[194,550],[123,530],
+    [66,509],[32,487],[18,462],[10,424],[9,347],[9,176]];
+  const perimeter=[...leftSkirt];
+  for(let i=1;i<20;i++) {
+    const a=i*Math.PI/20;
+    perimeter.push([300-291*Math.cos(a),176-167*Math.sin(a)]);
+  }
+  for(const [x,y] of leftSkirt.slice().reverse())perimeter.push([600-x,y]);
+  const hardwareRailCount=rails.length;
+  for(let i=1;i<perimeter.length;i++)rails.push([...perimeter[i-1],...perimeter[i]]);
   const wheel={x:143,y:397,angle:-.46,speed:0,inertia:147};
-  return {pegs,rails,wheel};
+  return {pegs,rails,wheel,perimeter,leftSkirt,hardwareRailCount,drain};
+}
+
+function enteredOut(ball,field) {
+  const {x,y,halfWidth}=field.drain;
+  if(ball.previousY>=y || ball.y<y)return false;
+  const at=ball.previousX+(ball.x-ball.previousX)*(y-ball.previousY)/(ball.y-ball.previousY);
+  return Math.abs(at-x)<halfWidth;
 }
 
 // The four swept vanes are capsules around these same center lines in both passes.
@@ -101,7 +117,31 @@ function drawFieldwork(ctx, field, now) {
     const art = document.createElement('canvas');
     art.width=art.height=1200;
     const c=art.getContext('2d');c.scale(2,2);c.lineCap='round';
-    for(const [x,y,a,b] of field.rails) {
+    const outline=()=> {
+      c.beginPath();
+      field.perimeter.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));
+    };
+    // Fill the metal below both shoulders but leave the central drain open.
+    for(const mirror of [false,true]) {
+      c.save();
+      if(mirror){c.translate(600,0);c.scale(-1,1);}
+      c.beginPath();
+      field.leftSkirt.slice(0,-2).forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));
+      c.lineTo(-2,424);c.lineTo(-2,605);c.lineTo(field.leftSkirt[0][0],605);c.closePath();
+      const lip=c.createLinearGradient(0,475,0,600);
+      lip.addColorStop(0,'#1c201fa8');lip.addColorStop(.45,'#3d3b35da');lip.addColorStop(1,'#171915');
+      c.fillStyle=lip;c.fill();c.restore();
+    }
+    c.lineJoin='round';
+    for(const [width,color,dy] of [[9,'#161917bc',2],[6,'#332b22',0],[4.5,'#a79479',0],[2.3,'#d5d4bb',-.55],[.9,'#f8f4dc',-1.1]]){
+      c.save();c.translate(0,dy);outline();c.strokeStyle=color;c.lineWidth=width;c.stroke();c.restore();
+    }
+    const {x:mouthX,y:mouthY,halfWidth}=field.drain;
+    c.fillStyle='#080a0a';c.fillRect(mouthX-halfWidth+2,mouthY-9,halfWidth*2-4,21);
+    c.strokeStyle='#776d59';c.lineWidth=1;
+    for(let i=-13;i<15;i+=5)stroke(c,mouthX+i,mouthY+3,mouthX+i-4,598,'#3c3930',1.4);
+    c.fillStyle='#e4cfab';c.font='bold 8px sans-serif';c.textAlign='center';c.fillText('OUT',mouthX,596);
+    for(const [x,y,a,b] of field.rails.slice(0,field.hardwareRailCount)) {
       stroke(c,x+2,y+4,a+2,b+4,'#160e0ac7',5.1);
       stroke(c,x,y,a,b,'#3d3024',4.5);
       stroke(c,x-.25,y-.6,a-.25,b-.6,'#927658',3.35);
