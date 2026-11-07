@@ -7,22 +7,14 @@ const STACK_LIMIT = 5, ODDS = 319.7, ATTACKER_CAPACITY = 30, BATTLE_DURATION = 9
 let stock=0, shots=0, hits=0, wins=0, now=0, lastShot=-1;
 let sound=false, ac, force=0, mode='empty', insertion=0, payout=0, payoutClock=0, rightHits=0;
 let warningUntil=0, warningMessage='', activeDraw=null, waiting=[], reels=[7,7,7], gateOpened=0;
-let balls=[], pegs=[], sparks=[], hasResult=false;
+let balls=[], hasResult=false;
+const field=createFieldwork();
+const pegs=field.pegs;
+const bank=new BanknoteAcceptor();
 const standby=document.createElement('canvas');
 standby.width=standby.height=600;
 drawBattle(standby.getContext('2d'),1.05,0,[0,0,0],false);
-const guideRails=[[33,356,84,423],[567,356,516,423],[60,470,93,493],[505,470,472,493]];
-const rails=[...guideRails,[196,267,204,239],[204,239,230,224],[230,224,370,224],[370,224,396,239],[396,239,404,267],[196,267,196,340],[404,267,404,340],[196,340,217,359],[217,359,300,375],[300,375,383,359],[383,359,404,340]];
-function peg(x,y,r=3.7){pegs.push({x,y,r,light:0})}
-for(let row=0;row<10;row++){
-  const y=78+row*43;
-  for(let col=0;col<12;col++){
-    const x=41+col*47+(row%2)*22;
-    if(x>562||((x-300)/285)**2+((y-265)/259)**2>1.07||(x>177&&x<424&&y>208&&y<385)) continue;
-    peg(x+Math.sin(col*2+row)*7,y+Math.cos(row+col)*6);
-  }
-}
-peg(289,511,3.6); peg(311,511,3.6);
+const rails=[...field.rails,[196,267,204,239],[204,239,230,224],[230,224,370,224],[370,224,396,239],[396,239,404,267],[196,267,196,340],[404,267,404,340],[196,340,217,359],[217,359,300,375],[300,375,383,359],[383,359,404,340]];
 const handle = new RotaryHandle($('handle'), value => {force=value;});
 
 function line(x,y,a,b,color,w){g.beginPath();g.moveTo(x,y);g.lineTo(a,b);g.lineWidth=w;g.strokeStyle=color;g.stroke()}
@@ -32,7 +24,6 @@ function box(x,y,w,h,r,c,stroke){g.beginPath();g.roundRect(x,y,w,h,r);g.fillStyl
 function txt(t,x,y,font,c){g.textAlign='center';g.font=font;g.fillStyle=c;g.fillText(t,x,y)}
 function draw(){let d=Math.min(2,devicePixelRatio||1),size=Math.max(1,Math.round(cv.clientWidth*d));if(cv.width!==size){cv.width=cv.height=size}g.setTransform(size/600,0,0,size/600,0,0);g.clearRect(0,0,600,600);
 let sh=g.createRadialGradient(300,260,170,300,280,390);sh.addColorStop(0,'#0c080800');sh.addColorStop(1,'#120c09c9');g.fillStyle=sh;g.fillRect(0,0,600,600);
-for(let [x,y,a,b] of guideRails){line(x,y+3,a,b+3,'#120d0b',8);line(x,y,a,b,'#82603d',6);line(x,y-1,a,b-1,'#dfbf87',1.6)}
 g.save();
 g.translate(300,297);
 const bezel=[[-108,-53],[-83,-72],[83,-72],[108,-53],[108,43],[84,62],[0,78],[-84,62],[-108,43]];
@@ -54,7 +45,7 @@ if(!hasResult){
 }
 for(let i=0;i<9;i++)circle(-72+i*18,58-Math.abs(i-4)*1.8,2.3,activeDraw||i%2?'#f5c183':'#9c7046');
 g.restore();
-for(let p of pegs){circle(p.x+1.5,p.y+2.5,p.r+1,'#120e0bc4');circle(p.x,p.y,p.r,p.light?'#ffce80':'#695742');circle(p.x-.6,p.y-.8,p.r*.75,'#cfbaa0');circle(p.x-1.2,p.y-1.6,1.3,'#fff1d2')}
+drawFieldwork(g,field,now);
 // Only the opening between the two gold nails accepts a start ball.
 box(287,521,26,12,4,'#21140f','#bb935e');
 line(293,521,307,521,'#060606',4);
@@ -71,8 +62,11 @@ if (mode==='right') {
   txt('▶ 入賞',550,486,'bold 13px serif','#ffdf99');
 }
 txt('•    O U T    •',300,583,'bold 11px Georgia','#d4b383');
-for(let b of balls){circle(b.x+2,b.y+3,5,'#100e0cb0');let gr=g.createRadialGradient(b.x-1.5,b.y-2,0,b.x,b.y,5.4);gr.addColorStop(0,'#fff');gr.addColorStop(.28,'#f1f4f0');gr.addColorStop(.6,'#8b9694');gr.addColorStop(.85,'#414642');gr.addColorStop(1,'#cfd2c4');circle(b.x,b.y,5,gr)}
-for(let p of sparks){g.globalAlpha=Math.min(1,p.t*2);circle(p.x,p.y,1.7,'#ffcb83')}g.globalAlpha=1;if(activeDraw) drawBattle(g,activeDraw.elapsed,activeDraw.variant,activeDraw.digits,activeDraw.won);
+for(const ball of balls){
+  if(ball.route==='service')drawServiceDrain(g,ball);
+  else tray.drawPlayfieldBall(g,ball);
+}
+if(activeDraw) drawBattle(g,activeDraw.elapsed,activeDraw.variant,activeDraw.digits,activeDraw.won);
 }
 function msg(value){$('log').textContent=value}
 function stackCount(){return waiting.length + Number(Boolean(activeDraw))}
@@ -99,13 +93,19 @@ function tone(f,d=.05,vol=.045,type='sine'){
 }
 function insertNote(){
   if(insertion||payout||stock>=250)return;
-  insertion=1.25;
-  $('bank').classList.add('inserting');tone(140,.28,.04,'triangle');msg('지폐를 인식하고 있습니다.');status();
+  insertion=bank.duration;
+  bank.open();
+  $('bank').classList.add('inserting');msg('지폐를 인식하고 있습니다.');status();
 }
 function advanceTray(dt){
   if(insertion){
+    const before=insertion;
     insertion=Math.max(0,insertion-dt);
+    if(before>bank.duration-.8 && insertion<=bank.duration-.8)bank.motor(sound?ac:null);
+    if(before>.45 && insertion<=.45)tone(880,.105,.035);
+    bank.render(bank.duration-insertion);
     if(!insertion){
+      bank.close();
       $('bank').classList.remove('inserting');
       if(mode==='empty')mode='normal';
       payout+=250;msg('지폐 인식 완료 · 구슬 250개를 대여합니다.');status();
@@ -202,6 +202,7 @@ function bounce(b,x,y,r,coef){
 }
 function advanceBall(b,dt){
   b.t+=dt;
+  if(b.route==='service')return advanceServiceDrain(b,dt);
   if(b.launch){
     const t=Math.min(b.t,b.end);
     if(t<.30){b.x=16;b.y=533-1190*t}
@@ -228,6 +229,7 @@ function advanceBall(b,dt){
     if(Math.abs(b.x-p.x)>10||Math.abs(b.y-p.y)>10)continue;
     if(bounce(b,p.x,p.y,p.r+5,.56)){p.light=.12;if(Math.abs(b.vy)+Math.abs(b.vx)>60&&rand()<.45)tone(1100+p.x,.035,.012)}
   }
+  if(collideWindmill(b,field,dt))tone(460,.065,.023,'triangle');
   for(const [x,y,a,z] of rails){
     if(b.y<Math.min(y,z)-8||b.y>Math.max(y,z)+8)continue;
     const dx=a-x,dy=z-y,u=Math.max(0,Math.min(1,((b.x-x)*dx+(b.y-y)*dy)/(dx*dx+dy*dy)));
@@ -238,10 +240,11 @@ function advanceBall(b,dt){
     const crossingX=previousX+(b.x-previousX)*(520-previousY)/(b.y-previousY);
     if(Math.abs(crossingX-300)<3.5 && mode==='normal'){score();return true}
   }
-  return b.y>610||b.t>23;
+  advanceUnsticking(b,dt,field,rails);
+  return b.y>610;
 }
 function step(dt){
-  now+=dt;advanceTray(dt);
+  now+=dt;advanceTray(dt);advanceFieldwork(field,dt);
   if(force && now-lastShot>=.60)fire();
   for(let i=balls.length-1;i>=0;i--)if(advanceBall(balls[i],dt))balls.splice(i,1);
   for(const p of pegs)p.light=Math.max(0,p.light-dt);

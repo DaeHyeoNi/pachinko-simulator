@@ -65,11 +65,19 @@ h1 span { margin-left: 8px; color: #b99c73; vertical-align: middle; font: 16px G
 #warning:not([hidden])::before { content: "⚠"; color: #ffd47b; font: bold 20px/1 sans-serif; }
 .screw { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: linear-gradient(135deg, #ceab7c, #69513c 42%, #2b2118 44% 55%, #b7986a 57%, #564533); box-shadow: 0 1px 2px #000; }
 .a, .c { left: 9px; } .b, .d { right: 9px; } .a, .b { top: 10px; } .c, .d { bottom: 10px; }
-.tray-frame { position: relative; width: 92%; margin: 8px auto 0; padding: 1px 4px 4px; border: 1px solid #74624c; border-radius: 8px 8px 16px 16px; background: linear-gradient(#392c24, #161412 28%, #6a5843 97%, #211b17); }
-.tray-ledge { position: relative; height: 17px; color: #ccbb9c; font-size: 9px; text-align: right; padding: 1px 10px; }
-.tray-chute { position: absolute; top: 3px; left: 8.5%; width: 7%; height: 16px; border: 2px solid #796e5c; border-top-color: #161311; border-radius: 3px 3px 9px 9px; background: linear-gradient(#090a09 20%,#2e302b 85%,#777265); box-shadow: 0 2px 3px #0009; }
-.tray-basin { overflow: hidden; border: 1px solid #121310; border-radius: 5px 5px 13px 13px; background: repeating-linear-gradient(-14deg,#ffffff03 0 1px,transparent 1px 4px), linear-gradient(#242521, #41443e 56%, #595b50 90%, #20231f); box-shadow: inset 3px 4px 8px #060706b0, inset -3px -3px 4px #b0a38a4d; }
-#tray { width: 100%; height: auto; display: block; aspect-ratio: 600/108; }
+.tray-frame {
+  position: relative; width: 98%; margin: 6px auto 0; padding: 0 4px 5px;
+  border: 1px solid #3e3931; border-radius: 9px 9px 22px 22px;
+  background: linear-gradient(104deg,#454440,#c8c4b7 3%,#625c53 5%,#958a7d 20%,#f3edde 43%,#a29e95 55%,#524d49 81%,#d0c9b9 94%,#625b53 97%,#33322f);
+  box-shadow: inset 0 1px #eee9da, inset 0 -2px #272323, 0 4px 6px #080605a6;
+}
+.tray-ledge { position: relative; height: 8px; }
+.tray-basin {
+  overflow: hidden; border: 1px solid #3c211d; border-radius: 4px 4px 18px 18px;
+  background: linear-gradient(135deg,#1b1717,#5e2225 55%,#2d1216);
+  box-shadow: 0 -1px 2px #5b5149, 0 1px 1px #eee8d8;
+}
+#tray { display: block; width: 100%; height: auto; aspect-ratio: 600 / 164; }
 .base { height: 22px; justify-content: center; gap: 12px; color: #b69c79; }
 .base i { width: 55px; height: 1px; background: #765837; }
 .base strong { font: 11px Georgia; }
@@ -212,7 +220,7 @@ dialog b { display: block; color: #e8cd99; }
 .side.right::after { right: auto; left: 10%; }
 .tray-ledge::after {
   content: "";
-  position: absolute; height: 2px; left: 20%; right: 20%; top: 7px;
+  position: absolute; height: 2px; left: 20%; right: 20%; top: 3px;
   border-radius: 3px; background: #69543e; box-shadow: 0 1px #17120f;
 }
 .cabinet:is([data-fx="jackpot"],[data-fx="payout"]) .side::after {
@@ -240,7 +248,7 @@ dialog b { display: block; color: #e8cd99; }
   .intro { margin: 9px 0 10px; }
   h1 { font-size: 32px; }
   .grid { grid-template-columns: minmax(0,1.65fr) minmax(268px,1fr); gap: 16px; }
-  .cabinet { justify-self: center; width: min(100%,calc(93vh - 95px)); }
+  .cabinet { justify-self: center; width: min(100%,calc(86vh - 87px)); }
   .marquee { height: 23px; }
   .base { height: 16px; }
   .panel, .log { padding: 14px; }

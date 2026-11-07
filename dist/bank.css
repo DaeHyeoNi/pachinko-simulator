@@ -1,0 +1,14 @@
+.cash-reader-preview{
+ position:fixed;inset:0;display:grid;place-items:center;z-index:80;
+ background:radial-gradient(ellipse at center,#0d1018a6,#070808c9);backdrop-filter:blur(3px);
+ pointer-events:none;
+}
+.cash-reader-preview[hidden]{display:none}
+.cash-reader-preview canvas{width:min(475px,92vw);height:auto;aspect-ratio:500/370;
+ border-radius:20px;box-shadow:0 26px 70px #000b,0 0 0 1px #86816d65;background:#1f2223}
+#bank .acceptor{overflow:hidden;border-radius:6px;border:1px solid #625e53;
+ background:linear-gradient(165deg,#555650,#252725 45%,#111413 60%,#53534d);box-shadow:0 1px 2px #0008,inset 0 1px #ffffff39}
+#bank .acceptor .slot{left:8%;width:84%;top:24%;height:20%;border:1px solid #242824;border-top:2px solid #181915;
+ border-radius:3px;background:linear-gradient(#070a08,#050504 60%,#54785c);box-shadow:0 1px 0 #a5a19160}
+#bank .acceptor .banknote{top:46%;left:24%;width:52%;height:45%;border:1px solid #7f9883;transform:skewX(-10deg) rotate(-5deg);background:repeating-linear-gradient(50deg,#c5ceb1 0 1px,#98ad99 1px 2px,#cccfb8 2px 3px);font-size:8px}
+#bank.inserting .banknote{animation:none;visibility:hidden}

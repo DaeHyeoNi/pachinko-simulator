@@ -7,6 +7,7 @@
   <title>노을 신사 | GINKYO PACHINKO</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="handle.css">
+  <link rel="stylesheet" href="bank.css">
 </head>
 <body>
   <svg aria-hidden="true" class="symbols">
@@ -68,8 +69,8 @@
           <div class="side right" aria-hidden="true"><small>MODEL · GK–01</small><strong>幸<br>運<br>祈<br>願</strong></div>
         </div>
         <div class="tray-frame">
-          <div class="tray-ledge"><span>구슬 받침대</span><span class="tray-chute" aria-hidden="true"></span></div>
-          <div class="tray-basin"><canvas id="tray" width="600" height="108" aria-label="지급구에서 구슬이 쏟아지고 발사 시 급탄구로 빠져나가는 받침대"></canvas></div>
+          <div class="tray-ledge" aria-hidden="true"></div>
+          <div class="tray-basin"><canvas id="tray" width="600" height="164" role="img" aria-label="위쪽 투입구와 붉은 외부 구슬 받침대. 지급받은 구슬이 쌓이고 발사할 때마다 급탄구로 빠져나갑니다."></canvas></div>
         </div>
         <div class="base" aria-hidden="true"><span>✦</span><i></i><strong>夕 映 神 社</strong><i></i><span>✦</span></div>
       </section>
@@ -110,13 +111,16 @@
     <h2 id="guide-title">이용 안내</h2>
     <p><b>구슬 빌리기</b>가상 지폐 1,000엔을 넣으면 지급구에서 구슬 250개가 나옵니다.</p>
     <p><b>발사하기</b>손잡이를 시계 방향으로 돌려 강도를 정하세요. 손잡이를 고정하면 손을 떼도 같은 강도로 계속 발사합니다.</p>
-    <p><b>헤소 추첨</b>구슬이 중앙 헤소에 들어가면 상구 1개를 받고 로봇 전투가 시작됩니다. 진행 중인 추첨과 보류를 합해 최대 5개이며 가득 차면 추가 입상은 상구만 지급합니다. 추첨 1회당 대당첨 확률은 1/319.7입니다.</p>
+    <p><b>헤소 추첨</b>왼쪽 유도 레인 위의 풍차는 구슬이 날개에 부딪치면 회전하면서 낙하 방향을 바꿉니다. 구슬이 중앙 헤소에 들어가면 상구 1개를 받고 로봇 전투가 시작됩니다. 진행 중인 추첨과 보류를 합해 최대 5개이며 가득 차면 추가 입상은 상구만 지급합니다. 추첨 1회당 대당첨 확률은 1/319.7입니다.</p>
     <p><b>대당첨 우타</b>숫자 세 개가 일치하면 손잡이를 95% 이상 돌려 오른쪽 어태커를 노리세요. 3라운드 동안 라운드마다 10개까지 입상하며 1개당 15개를 지급합니다. 평상시에 우타로 넘어간 구슬은 받침대로 돌아옵니다.</p>
     <button id="close" type="button">플레이로 돌아가기</button>
   </dialog>
   <script src="tray.js"></script>
   <script src="battle.js"></script>
   <script src="handle.js"></script>
+  <script src="fieldwork.js"></script>
+  <script src="flow.js"></script>
+  <script src="bank.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
