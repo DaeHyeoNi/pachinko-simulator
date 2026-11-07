@@ -1,0 +1,104 @@
+.rotary-handle {
+  --rh-accent: #d8b679;
+  color: #e9e5da;
+}
+.rotary-handle.rh-right { --rh-accent: #ff9e6d; }
+.rh-top, .rh-lock-row, .rh-marks {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.rh-top strong, .rh-lock-row span { font-size: 13px; }
+.rh-readout {
+  color: var(--rh-accent);
+  font: 11px Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.rh-readout b { font-size: 20px; margin-right: 3px; }
+.rh-instrument { width: 148px; margin: 5px auto 8px; position: relative; }
+.rh-dial {
+  --rh-angle: -122deg;
+  --rh-sweep: 0deg;
+  aspect-ratio: 1;
+  position: relative;
+  border-radius: 50%;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  cursor: grab;
+}
+.rh-dial:focus-visible { outline: 2px solid var(--rh-accent); outline-offset: 2px; }
+.rh-dial.rh-dragging { cursor: grabbing; }
+.rh-scale, .rh-scale::before, .rh-scale::after, .rh-rotor,
+.rh-face, .rh-index, .rh-grip { position: absolute; pointer-events: none; }
+.rh-scale {
+  inset: 0;
+  background: conic-gradient(from 238deg, var(--rh-accent) 0 var(--rh-sweep), #514e42 var(--rh-sweep) 231deg, #a45e43 231deg 244deg, transparent 244deg);
+  border-radius: 50%;
+  mask: radial-gradient(circle closest-side, transparent 90%, #000 91% 98%, transparent 99%);
+}
+.rh-scale::before {
+  content: '';
+  inset: 0;
+  background: repeating-conic-gradient(from 238deg, #191a17 0deg 1.8deg, transparent 1.8deg 10.15deg);
+}
+.rh-rotor {
+  inset: 12%;
+  border: 2px solid #151612;
+  border-radius: 50%;
+  background: conic-gradient(from -24deg, #d1c5a8, #544d40 19%, #e5d9bf 32%, #625c51 46%, #312e27 57%, #8c8779 71%, #e6d9ba 83%, #6b6351 94%, #d1c5a8);
+  box-shadow: 0 4px 5px #000b, 0 0 0 3px #514c3d, 0 0 0 5px #11120f, inset 0 0 0 1px #e3d3a8;
+}
+.rh-face {
+  inset: 9%; border-radius: 50%;
+  border: 2px solid #171713;
+  background: repeating-radial-gradient(circle, #19191824 0 1px, transparent 1px 3px),
+    conic-gradient(from -52deg, #ada58e, #57564b 16%, #827f70 38%, #45443a 52%, #9b9580 74%, #5c5c50 91%, #ada58e);
+  box-shadow: inset 0 0 0 1px #c1b89c, inset 0 0 10px #17181099;
+}
+.rh-face::after {
+  content: '銀'; position: absolute; inset: 0; display: grid; place-items: center;
+  color: #35362e; text-shadow: 0 1px #ccc5a880; font: bold 25px Georgia, serif;
+}
+.rh-index, .rh-grip {
+  inset: 0; transform: rotate(var(--rh-angle));
+  transition: transform 160ms cubic-bezier(.16,.8,.32,1);
+}
+.rh-index::before {
+  content: ''; position: absolute; top: 0; left: calc(50% - 2px);
+  width: 4px; height: 10px; background: #fff0bd;
+  box-shadow: 0 0 3px #32220b;
+}
+.rh-grip::before {
+  content: ''; position: absolute; top: 12%; left: calc(50% - 12px);
+  width: 24px; height: 31px; border-radius: 45% 45% 42% 42%;
+  border: 1px solid #342b23;
+  background: linear-gradient(105deg, #332f28, #9d9585 24%, #eee6ce 43%, #aaa494 62%, #5e5c51 81%, #403e35);
+  box-shadow: 2px 2px 4px #0008, inset 0 1px 2px #fff6;
+}
+.rh-dragging .rh-index, .rh-dragging .rh-grip { transition: none; }
+.rh-marks {
+  position: absolute; bottom: 6%; left: 9%; right: 9%; pointer-events: none;
+  color: #b4b0a2; font-size: 10px; font-weight: bold;
+}
+.rh-marks span:last-child { color: #d99271; }
+.rh-lock-row { padding-top: 11px; border-top: 1px solid #3c3c33; }
+.rh-lock-row .rh-lock {
+  display: grid; align-items: center; width: 38px; height: 24px; padding: 2px;
+  background: #30322b; border: 1px solid #666656; border-radius: 20px; cursor: pointer;
+}
+.rh-lock i {
+  width: 16px; height: 16px; display: block; background: #acae9e;
+  border-radius: 50%; transition: transform 140ms;
+}
+.rh-lock[aria-checked="true"] { background: #86482d; border-color: #c3875a; }
+.rh-lock[aria-checked="true"] i { transform: translateX(15px); background: #ffdb9f; }
+.rh-hint { font-size: 11px; line-height: 1.6; color: #b1b1a3; margin: 8px 0 0; }
+.rotary-handle[inert] { opacity: .55; }
+@media (max-width: 660px) {
+  .rh-instrument { width: 132px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rh-index, .rh-grip, .rh-lock i { transition: none; }
+}
