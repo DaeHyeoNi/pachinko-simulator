@@ -24,7 +24,11 @@ const displayOutline = [
   [175,59], [419,73], [489,112], [489,308],
   [420,357], [169,354], [105,308], [105,109]
 ];
-const rails = [...field.rails, ...displayOutline.map(([x,y],i)=>{
+// The LCD glass stays flat inside its gasket. A separate clear molded hood
+// above it has a crown and two downhill shoulders, visible at their contact lines.
+const roofCap=[displayOutline[0],[294,36],[301,35.5],[308,36],displayOutline[1]];
+const roofEdges=roofCap.slice(1).map((v,i)=>[...roofCap[i],...v]);
+const rails = [...field.rails, ...roofEdges, ...displayOutline.map(([x,y],i)=>{
   const [u,v] = displayOutline[(i+1)%displayOutline.length];
   return [x,y,u,v];
 })];
@@ -58,6 +62,17 @@ function drawDisplay() {
   }
   g.save();
   g.lineJoin='round';
+  g.beginPath();
+  roofCap.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));
+  g.closePath();
+  const hood=g.createLinearGradient(0,35,0,72);
+  hood.addColorStop(0,'#c8f8ff82');hood.addColorStop(.24,'#6f9ba961');
+  hood.addColorStop(.68,'#2433475c');hood.addColorStop(1,'#bfd8e16b');
+  g.fillStyle=hood;g.fill();
+  for(const edge of roofEdges){
+    line(...edge,'#152635c9',4);
+    line(...edge,'#c9e9f4',1.2);
+  }
   traceBezel(displayOutline,3);
   g.fillStyle='#364950'; g.fill();
   g.strokeStyle='#182932'; g.lineWidth=2.3; g.stroke();
@@ -183,9 +198,10 @@ drawCoveredLaunch();
 drawDisplay();
 drawFieldwork(g,field,now);
 // Only the opening between the two gold nails accepts a start ball.
-box(284,521,32,12,4,'#21140f','#bb935e');
-line(290,521,310,521,'#060606',4);
-txt('始動',300,549,'bold 12px serif','#f3cc81');
+const mouth=field.heso;
+box(mouth.x-15,mouth.y+7,30,13,4,'#302e30','#bb935e');
+line(mouth.x-8,mouth.y+8,mouth.x+8,mouth.y+8,'#080808',4);
+txt('始動',mouth.x,mouth.y+29,'bold 10px serif','#f3cc81');
 drawChute();drawGates();
 for(const ball of balls){
   if(ball.launch)continue;
@@ -482,9 +498,10 @@ function finishBallStep(b,dt){
     }else collectAttacker();
     return true;
   }
-  if(b.previousY<520&&b.y>=520){
-    const crossingX=b.previousX+(b.x-b.previousX)*(520-b.previousY)/(b.y-b.previousY);
-    if(Math.abs(crossingX-300)<5 && mode==='normal'){score();return true}
+  const mouth=field.heso;
+  if(b.previousY<mouth.y && b.y>=mouth.y){
+    const crossingX=b.previousX+(b.x-b.previousX)*(mouth.y-b.previousY)/(b.y-b.previousY);
+    if(mode==='normal' && Math.abs(crossingX-mouth.x)<=mouth.halfSpacing-mouth.nailRadius-5){score();return true}
   }
   advanceUnsticking(b,dt,field,rails);
   return enteredOut(b,field);

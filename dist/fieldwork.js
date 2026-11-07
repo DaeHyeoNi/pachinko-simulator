@@ -2,45 +2,45 @@
 function createFieldwork() {
   const pegs = [];
   const rails = [];
-  function nail(x, y, radius = 2.25, cant = 0) {
+  const shaftRadius=0.85; // 1.85 mm shaft relative to an 11 mm ball (10 board units).
+  function nail(x, y, headRadius = 2.0, cant = 0) {
     const index = pegs.length;
     const grain = Math.sin(index * 47.6 + x * .12);
-    pegs.push({x, y, r: radius, light: 0, dx: 1.8 + cant + grain * .42, dy: -4.9 + grain * .58});
+    pegs.push({x, y, r: shaftRadius, headRadius, light: 0, dx: 1.8 + cant + grain * .42, dy: -4.9 + grain * .58});
   }
-  function road(x, y, dx, dy, count, cant = 0) {
-    const spanX=dx*(count-1),spanY=dy*(count-1);
-    // Loose groups have more than a ball diameter of daylight between shafts.
-    const looseCount=Math.max(2,1+Math.floor(Math.hypot(spanX,spanY)/16.2));
-    const guided=y>=358;
-    const n=guided?count:looseCount;
-    for(let i=0;i<n;i++)nail(x+spanX*i/(n-1),y+spanY*i/(n-1),2.18,cant);
-    if(guided)rails.push([x,y-1.15,x+spanX,y+spanY-1.15]);
+  // Coordinates describe shaft centers in the collision plane. Each group
+  // is an actual set of pins; the gaps between groups are open to the drain.
+  function row(x,y,dx,dy,count,cant=0){
+    for(let i=0;i<count;i++)nail(x+dx*i,y+dy*i,1.85,cant);
   }
-  function divider(x, y, flip = 1) {
-    nail(x,y); nail(x-8*flip,y+15); nail(x+9*flip,y+21);
-  }
-  // Paired short roads alternate across the two narrow gutters around the LCD.
-  // The crown is left clear for the spring launch and its upper transfer track.
-  road(50,131,9,-6,5); road(83,154,-8,7,4);
-  road(38,189,9,4,6); road(78,220,-9,7,4);
-  road(39,253,10,5,5); road(82,278,-8,7,4);
-  road(48,311,9,7,4); divider(99,326);
-  road(68,358,9.5,5.7,7); road(162,409,10.8,4.5,9);
-  road(506,132,9,7,5); road(553,174,-10,6,5);
-  road(511,210,9,6,5); road(566,240,-10,6,5);
-  road(511,280,9,6,5); road(556,315,-9,6,4);
-  road(489,336,-8,7,4);
-  road(511,359,-10,5,6); divider(441,396,-1);
-  // The two independently pitched banks below the LCD feed the start-pocket area.
-  road(89,399,11.2,5.4,7); divider(104,437);
-  road(139,459,11.4,4.9,6);
-  road(210,478,11.75,3,8);
-  road(493,406,-11,5.4,6); road(414,432,-10.5,3.8,6);
-  road(465,457,-11,5.1,5); road(395,478,-11.7,3,8);
-  divider(242,397); divider(349,406,-1);
-  nail(280,459); nail(317,449); nail(294,423);
-  // Two actual brass nails frame the narrow mouth above the single heso.
-  nail(287.5,511,2.85,-.8); nail(312.5,511,2.85,.8);
+  const wheel={x:79,y:327,angle:-.46,speed:0,inertia:147};
+  const heso={x:300,y:464,halfSpacing:8.2,nailRadius:shaftRadius};
+  // Incoming fan narrows to two three-pin columns directly above the rotor.
+  row(49,130,12,-8,4); row(95,148,-11,8,3);
+  row(40,183,13,-6,3); nail(89,191);
+  row(44,215,12,6,3); nail(91,234);
+  row(36,245,6,9,3); row(66,253,5,7,3);
+  row(73,281,0,8,3,-.3); row(91,281,0,8,3,.3);
+  // Catch a portion of the inward wheel exits on the road. Each run has a
+  // different pitch; the last single jump nail stands clear of the mouth.
+  row(58,354,7,4.1,5); row(105,374,7.4,3.6,6);
+  row(152,393,7.4,3.45,5); row(196,414,7.6,3.3,6);
+  row(240,435,7.6,3.25,5);
+  nail(282,459,1.95,-.25);
+  nail(heso.x-heso.halfSpacing,heso.y,1.96,-.55);
+  nail(heso.x+heso.halfSpacing,heso.y,1.96,.55);
+  nail(318,459,1.95,.25);
+  // Short right-side banks are interspersed with the independent acrylic
+  // transfer hardware. The lower outside nails disperse misses toward OUT.
+  row(508,144,11,6,4); row(550,181,-9,8,3);
+  row(513,219,9,6,4); row(557,261,-8,9,3); row(509,292,8,7,3);
+  row(514,321,-8,8,4); row(498,366,-8,4,4);
+  row(467,391,-8,4,4); row(425,414,-8,3.4,4);
+  row(379,433,-8,3.1,5);
+  row(53,378,-5,11,3); row(74,418,6,9,3);
+  row(121,439,-7,9,3); row(159,470,8,4,3);
+  row(209,492,8,3.7,3); row(413,479,-8,5,3);
+  row(457,449,5,9,3); row(353,504,-8,4,3);
   rails.push([27,340,51,374],[62,446,92,466],[529,421,505,445]);
   // This single open-ended chain goes up the left wall, around the glass and
   // down the right wall. Its only opening is the bottom drain throat.
@@ -55,8 +55,8 @@ function createFieldwork() {
   for(const [x,y] of leftSkirt.slice().reverse())perimeter.push([600-x,y]);
   const hardwareRailCount=rails.length;
   for(let i=1;i<perimeter.length;i++)rails.push([...perimeter[i-1],...perimeter[i]]);
-  const wheel={x:143,y:397,angle:-.46,speed:0,inertia:147};
-  return {pegs,rails,wheel,perimeter,leftSkirt,hardwareRailCount,drain};
+
+  return {pegs,rails,wheel,heso,perimeter,leftSkirt,hardwareRailCount,drain};
 }
 
 function enteredOut(ball,field) {
@@ -152,17 +152,27 @@ function drawFieldwork(ctx, field, now) {
       }
     }
     for(const p of field.pegs) {
-      const x=p.x,y=p.y,footX=x-p.dx*.38,footY=y-p.dy*.38;
-      const tipX=x+p.dx*.62,tipY=y+p.dy*.62;
-      stroke(c,footX+.8,footY+.7,tipX+2.8,tipY+4.5,'#0e0909a8',3);
-      oval(c,footX,footY,1.62,1.15,-.24,'#302117');
-      stroke(c,footX,footY,tipX,tipY,'#4e3927',2.7);
-      stroke(c,footX-.27,footY-.27,tipX-.31,tipY-.29,'#b18a56',1.65);
-      stroke(c,footX-.45,footY-.57,tipX-.57,tipY-.2,'#ebc991',.67);
-      oval(c,tipX+.22,tipY+.52,p.r*.96,p.r*.71,.19,'#443124');
-      oval(c,tipX,tipY,p.r*.95,p.r*.62,.19,'#ae8751');
-      oval(c,tipX-.16,tipY-.33,p.r*.78,p.r*.38,.13,'#eed29b');
-      stroke(c,tipX-p.r*.52,tipY-.55,tipX+.2,tipY-.6,'#fff0c3',.7);
+      // The player looks almost straight down each shaft. Keep the head over
+      // its contact coordinate and project the mounting hole behind it.
+      const x=p.x,y=p.y,r=p.headRadius;
+      const footX=x-p.dx*.48+(300-x)*.005,footY=y-p.dy*.73;
+      stroke(c,footX+.7,footY+.6,x+2.2,y+2.3,'#0b0e14a3',r*1.15);
+      oval(c,footX,footY,r*.59,r*.5,-.12,'#26282a');
+      stroke(c,footX,footY,x,y,'#3c3020',r*1.02);
+      stroke(c,footX-.25,footY-.1,x-.25,y,'#c4a460',r*.53);
+      stroke(c,footX-.44,footY-.15,x-.44,y,'#fff2b8',r*.18);
+      // A white lamp strip and a dark central reflection give the shallow
+      // round cap its polished brass finish. Silver balls have a much wider highlight.
+      const face=c.createLinearGradient(x-r,y-r*.2,x+r,y+r*.23);
+      for(const [stop,color] of [[0,'#736039'],[.17,'#ead99a'],[.31,'#fff7c9'],
+        [.40,'#a78a49'],[.55,'#765c31'],[.7,'#bf9d56'],[.89,'#f7df98'],[1,'#937039']]){
+        face.addColorStop(stop,color);
+      }
+      oval(c,x+.15,y+.32,r*1.02,r*.96,.05,'#4b3924');
+      oval(c,x,y,r*.97,r*.91,.05,face);
+      oval(c,x-.22*r,y-.47*r,r*.33,r*.19,-.31,'#fffae1');
+      c.beginPath();c.ellipse(x,y,r*.82,r*.72,.05,.43,1.8);
+      c.lineWidth=r*.22;c.strokeStyle='#f0d48b';c.stroke();
     }
     field.art=art;
   }
@@ -170,23 +180,32 @@ function drawFieldwork(ctx, field, now) {
   ctx.save();
   const w=field.wheel;
   ctx.lineCap='round';
-  oval(ctx,w.x+1.7,w.y+3.1,8,7.6,0,'#0c0b0b9c');
-  oval(ctx,w.x,w.y,7.5,7.5,0,'#dfedf3');
-  oval(ctx,w.x,w.y,6.6,6.6,0,'#43617b');
+  // The transparent retaining cap is in front of the rotor; balls touch
+  // the short molded vanes behind it. Its outer lip is visible by refraction.
+  const capRadius=14.2;
+  ctx.beginPath();ctx.arc(w.x+1,w.y+1.6,capRadius,0,Math.PI*2);
+  ctx.lineWidth=1.6;ctx.strokeStyle='#1727358a';ctx.stroke();
+  oval(ctx,w.x,w.y,capRadius,capRadius,0,'#85d8fa14');
   windmillBlades(w,(x,y,a,b,index)=>{
-    stroke(ctx,x+1.7,y+2.8,a+1.7,b+2.8,'#090709a3',5.6);
-    stroke(ctx,x,y,a,b,'#18344c',5.3);
-    stroke(ctx,x-.15,y-.3,a-.15,b-.3,index%2?'#57b4d3':'#438dc4',4.3);
-    stroke(ctx,x-.6,y-.75,a-.6,b-.75,index%2?'#c3f9ff':'#9bdcff',1.35);
+    stroke(ctx,x+.6,y+1,a+.6,b+1,'#19394e99',5.3);
+    stroke(ctx,x,y,a,b,index%2?'#77c9e95c':'#8eb7db59',4.6);
+    stroke(ctx,x-.53,y-.6,a-.53,b-.6,'#d6f4ffba',1);
   });
-  oval(ctx,w.x,w.y,4.2,4.2,0,'#567383');
-  oval(ctx,w.x-.25,w.y-.6,3.3,3.3,0,'#edfaff');
-  oval(ctx,w.x-.35,w.y-.65,2.05,2.05,0,'#97b1b8');
-  stroke(ctx,w.x-1.3,w.y-.2,w.x+.65,w.y-1.1,'#3e3429',.8);
+  const rim=ctx.createLinearGradient(w.x-12,w.y-10,w.x+11,w.y+11);
+  rim.addColorStop(0,'#ccedffce');rim.addColorStop(.3,'#6687a981');
+  rim.addColorStop(.62,'#2353797d');rim.addColorStop(.85,'#a5dcffcf');rim.addColorStop(1,'#efffffab');
+  for(const radius of [capRadius,capRadius-1.55,8.8]){
+    ctx.beginPath();ctx.arc(w.x,w.y,radius,0,Math.PI*2);
+    ctx.strokeStyle=rim;ctx.lineWidth=radius===capRadius?1.15:.7;ctx.stroke();
+  }
+  oval(ctx,w.x,w.y,4.1,4.1,0,'#8fbed283');
+  oval(ctx,w.x,w.y,2.45,2.45,0,'#6f572c');
+  oval(ctx,w.x-.1,w.y-.2,1.95,1.9,0,'#c8a35e');
+  oval(ctx,w.x-.65,w.y-.75,.78,.58,-.27,'#fff4c7');
   for(const p of field.pegs) {
     if(p.light<=0)continue;
-    ctx.globalAlpha=Math.min(.85,p.light*7);
-    oval(ctx,p.x+p.dx*.62,p.y+p.dy*.62,p.r,p.r*.65,.19,'#fff0b8');
+    ctx.globalAlpha=Math.min(.68,p.light*5.5);
+    oval(ctx,p.x-p.headRadius*.22,p.y-p.headRadius*.47,p.headRadius*.48,p.headRadius*.21,-.31,'#ffffdf');
   }
   ctx.restore();
 }
