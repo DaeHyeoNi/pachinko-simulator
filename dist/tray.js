@@ -12,6 +12,7 @@ class BallTray {
     this.outlet = {x: 529, z: 117};
     this.race=[];
     this.accumulator = 0;
+    this.crossfallClock = 0;
     this.awake = 0;
     this.dirty = true;
     this.ballRadius = 6.35;
@@ -324,40 +325,64 @@ class BallTray {
     const spacing=2*this.ballRadius+.35;
     let chosen=null;
     for(const ball of this.balls){
-      if(ball.race || ball.x>this.outlet.x+.4 || ball.y>this.ballRadius+.10)continue;
+      if(ball.race || ball.x>this.outlet.x+.4)continue;
       if(ball.z<this.frontLip(ball.x)-this.ballRadius*1.35)continue;
+      // At the mouth a ball can touch the next one uphill and rest a little
+      // above the floor. Let its weight tip it over the lip when space opens
+      // underneath, even if its last point of support was another sphere.
+      if(ball.y>this.ballRadius+.10 && (ball.x<this.outlet.x-this.ballRadius || ball.y>2*this.ballRadius ||
+        ball.z<this.frontLip(ball.x)-this.ballRadius*.35))continue;
       if(this.race.some(other=>Math.abs(other.x-ball.x)<spacing))continue;
       if(!chosen || ball.x>chosen.x)chosen=ball;
     }
     if(!chosen)return;
     const p=this.project(chosen);
     chosen.race=true;chosen.entry=0;chosen.entryX=p.x;chosen.entryY=p.y;
+    chosen.overLip=chosen.y>this.ballRadius+.10;
     chosen.entryZ=chosen.z;chosen.entryHeight=chosen.y;chosen.vx=Math.max(0,Math.min(100,chosen.vx));
     this.race.push(chosen);
     this.race.sort((a,b)=>b.x-a.x);
   }
 
-  settleFront(dt) {
-    // Resolve static friction against the tray's crossfall when a sparse
-    // residual pile interlocks. The frontmost ball has unobstructed downhill
-    // space ahead; roll it incrementally along the surface toward the rim.
-    if(this.race.length>2)return;
-    let leader=null,front=-Infinity;
-    for(const ball of this.balls){
-      if(ball.race)continue;
-      const z=ball.z-this.frontLip(ball.x);
-      if(z>front){front=z;leader=ball;}
+  rollDownhill(ball,axis,travel) {
+    if(travel<=0)return;
+    const forward=axis==='x';
+    const diameter=2*this.ballRadius+.0004;
+    const key=ball.bin;
+    for(let cy=-1;cy<=1;cy++)for(let cz=-1;cz<=1;cz++)for(let cx=-1;cx<=1;cx++){
+      const bin=this.cells.get(key+cy*1024+cz*64+cx);
+      if(!bin)continue;
+      for(const other of bin){
+        const separation=other[axis]-ball[axis];
+        if(separation<=0 || separation>=diameter+travel)continue;
+        const lateral=forward ? other.z-ball.z : other.x-ball.x;
+        const vertical=other.y-ball.y;
+        const crossSection=diameter*diameter-lateral*lateral-vertical*vertical;
+        if(crossSection<=0)continue;
+        travel=Math.min(travel,separation-Math.sqrt(crossSection));
+        if(travel<=.00001)return;
+      }
     }
-    if(!leader || front>=-this.ballRadius*.4)return;
-    const vz=Math.max(0,leader.crossfallSpeed||0);
-    const speed=Math.min(78,vz+95*dt);
-    const z=Math.min(this.frontLip(leader.x),leader.z+speed*dt);
-    const y=Math.max(this.floorAt(leader.x,z),leader.y-.12);
-    const next={x:leader.x,y,z};
-    if(!this.hasClearance(next,leader))return;
-    this.removeFromBin(leader);
-    leader.z=z;leader.y=y;leader.crossfallSpeed=speed;
-    this.putInBin(leader);
+    ball[axis]+=travel;
+    if(this.key(ball)!==key){this.removeFromBin(ball);this.putInBin(ball);}
+  }
+
+  settleFront(dt) {
+    // In a settled pile every supported sphere shares the tray's downhill
+    // acceleration. Resolving these contacts front to back lets the whole
+    // pack roll together, including balls that touch several neighbours.
+    const pile=this.balls.filter(ball=>!ball.race && ball.vy<30);
+    pile.sort((a,b)=>b.x-a.x);
+    for(const ball of pile){
+      ball.rollSpeed=Math.min(58,(ball.rollSpeed||0)+72*dt);
+      const right=this.outlet.x+(ball.z-this.outlet.z)*.085;
+      this.rollDownhill(ball,'x',Math.min(right-ball.x,ball.rollSpeed*dt));
+    }
+    pile.sort((a,b)=>b.z-a.z);
+    for(const ball of pile){
+      const room=this.frontLip(ball.x)-ball.z;
+      this.rollDownhill(ball,'z',Math.min(room,ball.rollSpeed*.58*dt));
+    }
   }
 
   advanceRace(dt) {
@@ -376,9 +401,10 @@ class BallTray {
         if(x===limit)ball.vx=0;
       }
       const destZ=this.frontLip(x)+this.ballRadius*1.75;
-      const fall=Math.min(1,entry*1.65);
+      const fall=ball.overLip ? Math.max(0,(entry-.55)/.45) : Math.min(1,entry*1.65);
       const y=ball.entryHeight+(-this.ballRadius-1-ball.entryHeight)*fall*fall;
-      const z=ball.entryZ+(destZ-ball.entryZ)*Math.max(0,(entry-.61)/.39);
+      const entryTravel=ball.overLip ? Math.min(1,entry/.55) : Math.max(0,(entry-.61)/.39);
+      const z=ball.entryZ+(destZ-ball.entryZ)*entryTravel;
       const target={x,y,z};
       if(this.hasClearance(target,ball)){
         this.removeFromBin(ball);
@@ -400,7 +426,10 @@ class BallTray {
         for(let i=this.balls.length-1;i>=0;i--){
           if(!this.balls[i].race)this.move(this.balls[i],1/60);
         }
-        this.settleFront(1/60);
+        if(++this.crossfallClock===3){
+          this.settleFront(3/60);
+          this.crossfallClock=0;
+        }
         this.accumulator-=1/60;
       }
     }

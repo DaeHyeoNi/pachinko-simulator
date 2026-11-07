@@ -55,16 +55,46 @@ main{width:min(100%,800px,max(430px,70svh));margin:auto;padding:8px}
 .lens-fin.port{left:0}.lens-fin.starboard{right:0;transform:scaleX(-1);--tint:#a584ff;--deep:#514283}
 .acrylic-rim{pointer-events:none;position:absolute;inset:0;z-index:4;border-radius:inherit;
   box-shadow:inset 1px 1px 1px #e5f5ffa8,inset -1px -1px #afbbcca3,inset 0 0 0 3px #cce3ff24}
-.acrylic-rim::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:3px;opacity:0;
-  background:repeating-conic-gradient(from var(--rim-angle,0deg),#9ff7ff 0deg,#558cf9 42deg,#ef80ff 82deg,#fff49e 109deg,#9ff7ff 145deg);
-  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude}
-@property --rim-angle{syntax:"<angle>";inherits:false;initial-value:0deg}
-.cabinet[data-fx="jackpot"] .acrylic-rim::after{opacity:1;padding:5px;animation:rim-turn 1.7s linear infinite}
-.cabinet[data-fx="jackpot"] .acrylic-rim{animation:rim-glow .8s ease-in-out infinite alternate}
-.cabinet[data-fx="payout"] .acrylic-rim::after{opacity:.34;padding:3px;animation:rim-turn 7s linear infinite}
-.cabinet[data-fx="jackpot"] .inner{box-shadow:0 0 14px #64d7ff9e,0 0 26px #9a73ff6b}
-@keyframes rim-glow{from{box-shadow:inset 0 0 6px #d5fcff8c,-2px 0 8px #62d6ffa6,2px 0 8px #d596ffab}to{box-shadow:inset 0 0 12px #fff1d6bf,-4px 0 20px #45ddffcf,5px 0 21px #fa8bffcf,0 -3px 14px #ffcd7499}}
-@keyframes rim-turn{to{--rim-angle:360deg}}
+/* Each lamp shares the scale and highlights of the molded acrylic beneath it.
+   It sits behind the playfield canvas, including every ball and steel nail. */
+.crystal-lamps{position:absolute;inset:0;z-index:-1;pointer-events:none}
+.crystal-lamps i{
+  position:absolute;inset:0;opacity:0;
+  background-image:url("machine-face.webp"),conic-gradient(from -18deg at 49% 36%,#ff7c80,#ffb465,#f2df71,#62ed89,#5fe6fc,#7792ff,#cc7dff,#ff74ac,#ff7c80);
+  background-size:100% 100%;background-blend-mode:luminosity;
+}
+.crystal-lamps .crown{
+  --delay:0s;
+  clip-path:polygon(0 0,100% 0,100% 8%,91% 9%,89% 14%,84% 19%,70% 12%,28% 10%,16% 19%,11% 15%,3% 22%,0 26%);
+}
+.crystal-lamps .port-guide{
+  --delay:.12s;
+  clip-path:polygon(0 26%,3% 22%,11% 15%,16% 19%,17% 51%,26% 59%,20% 62%,9% 61%,0 71%);
+}
+.crystal-lamps .starboard-guide{
+  --delay:.12s;
+  clip-path:polygon(100% 8%,100% 67%,93% 64%,86% 62%,78% 58%,82% 51%,82% 20%,84% 19%,89% 14%,91% 9%);
+}
+.crystal-lamps .apron{
+  --delay:.26s;
+  clip-path:polygon(1% 70%,8% 62%,16% 60%,23% 59%,17% 53%,28% 59%,70% 59%,82% 52%,79% 58%,87% 61%,94% 62%,99% 67%,99% 78%,96% 76%,94% 68%,86% 69%,81% 71%,74% 72%,73% 70%,57% 74%,54% 71%,51% 73%,47% 75%,45% 75%,42% 70%,39% 72%,36% 74%,26% 70%,24% 72%,14% 69%,10% 70%,6% 74%,3% 74%,2% 80%);
+}
+.cabinet:is([data-fx="jackpot"],[data-fx="payout"]) .crystal-lamps i{
+  --brightness:1.5;--intensity:.92;--period:2.6s;
+  animation:crystal-strike .42s ease-out var(--delay) both,crystal-spectrum var(--period) linear var(--delay) infinite;
+}
+.cabinet[data-fx="payout"] .crystal-lamps i{--brightness:1.32;--intensity:.86;--period:5.6s}
+.cabinet[data-fx="idle"][data-reach="on"] .crystal-lamps .apron{
+  background-image:url("machine-face.webp");filter:grayscale(.85) brightness(1.8);
+  animation:reach-breath 1.35s ease-in-out infinite alternate;
+}
+@keyframes crystal-strike{from{opacity:0}45%{opacity:1}to{opacity:var(--intensity)}}
+@keyframes crystal-spectrum{
+  0%{filter:hue-rotate(0deg) saturate(1.2) brightness(var(--brightness))}
+  50%{filter:hue-rotate(180deg) saturate(1.27) brightness(calc(var(--brightness) + .14))}
+  100%{filter:hue-rotate(360deg) saturate(1.2) brightness(var(--brightness))}
+}
+@keyframes reach-breath{from{opacity:.1}to{opacity:.65}}
 .screw{position:absolute;width:5px;height:5px;z-index:5;border-radius:50%;background:linear-gradient(135deg,#e2eff8,#758397 40%,#243043 43% 59%,#b9c9d6 62%,#556379);box-shadow:0 1px 1px #060b13}
 .a,.c{left:5px}.b,.d{right:5px}.a,.b{top:13px}.c,.d{bottom:14px}
 #stack{position:absolute;z-index:2;top:61.166667%;left:50%;transform:translate(-50%,-50%);
@@ -79,6 +109,7 @@ main{width:min(100%,800px,max(430px,70svh));margin:auto;padding:8px}
   text-align:center;white-space:pre-line;pointer-events:none;background:linear-gradient(90deg,transparent,#131d34f5 10% 90%,transparent);
   border-block:1px solid #d8b86e;color:#ffde9e;text-shadow:0 1px #2e2130;font:800 clamp(15px,2.4vw,27px)/1.4 "Malgun Gothic",sans-serif}
 .mechanism{position:absolute;z-index:2;inset:0;overflow:hidden;pointer-events:none}
+#warning.compact:not([hidden]){top:22%;width:max-content;max-width:58%;padding:.26em .7em;border:1px solid #aa873e;border-radius:4px;background:linear-gradient(#242328f2,#1c1820f7);color:#ffe6a8;white-space:nowrap;font:700 clamp(9px,1.8vw,14px)/1.3 "Malgun Gothic",sans-serif;font-variant-numeric:tabular-nums}
 .wing-port{position:absolute;top:4%;left:2%;width:37%}.wing-port.starboard{left:auto;right:2%;transform:scaleX(-1)}
 .wing-arm{transform-origin:9% 25%;transform:translate(-12%,-33%) rotate(-62deg);filter:drop-shadow(0 3px 2px #0b101bc9)}
 .mechanism svg{display:block;width:100%;overflow:visible}.wing-joint{transform-origin:106px 50px;transform:rotate(-62deg)}
@@ -141,4 +172,8 @@ dialog::backdrop{background:#040811c7}dialog h2{margin-top:0}dialog p{font-size:
 }
 @media(max-width:350px){.nameplate small{display:none}.lower-deck{--handle-width:73px;--dome-width:48px}.balance small{display:none}.balance>span{font-size:8px}#chancePush{padding-inline:2px}#chancePush span{font-size:13px}}
 @media(max-height:760px) and (min-width:521px){main{width:min(100%,max(405px,70svh));padding:3px}.machine-head{min-height:33px}.lower-deck{padding:3px 5px 6px}}
-@media(prefers-reduced-motion:reduce){.cabinet[data-fx] .acrylic-rim,.cabinet[data-fx] .acrylic-rim::after,.cabinet[data-fx] .wing-arm,.cabinet[data-fx] .wing-joint,.cabinet[data-fx] .crest-rail,.cabinet[data-chance] #chancePush{animation:none}}
+@media(prefers-reduced-motion:reduce){
+  .cabinet[data-fx] .wing-arm,.cabinet[data-fx] .wing-joint,.cabinet[data-fx] .crest-rail,.cabinet[data-chance] #chancePush{animation:none}
+  .cabinet:is([data-fx="jackpot"],[data-fx="payout"]) .crystal-lamps i{animation:none;opacity:var(--intensity);filter:brightness(var(--brightness)) saturate(1.5)}
+  .cabinet[data-fx="idle"][data-reach="on"] .crystal-lamps .apron{animation:none;opacity:.4}
+}

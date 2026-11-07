@@ -6,8 +6,8 @@ const cabinet = document.querySelector('.cabinet');
 const STACK_LIMIT = 5, ODDS = 319.7, ATTACKER_CAPACITY = 30;
 let stock=0, shots=0, hits=0, wins=0, now=0, lastShot=-1;
 let sound=false, ac, force=0, mode='empty', insertion=0, payout=0, payoutClock=0, rightHits=0;
-let warningUntil=0, warningMessage='', activeDraw=null, waiting=[], reels=[7,7,7], gateOpened=0;
-let balls=[], hasResult=false;
+let warningUntil=0, warningMessage='', activeDraw=null, waiting=[], gateOpened=0;
+let balls=[];
 const field=createFieldwork();
 const pegs=field.pegs;
 const bank=new BanknoteAcceptor();
@@ -70,21 +70,8 @@ function drawDisplay() {
   g.translate(lcd.centerX,lcd.centerY);
   const sceneScale=lcd.width/600;
   g.scale(sceneScale,sceneScale);g.translate(-300,-300);
-  if(activeDraw) {
-    if(activeDraw.elapsed<reelTiming.begin)drawBattle(g,activeDraw.elapsed,activeDraw.variant,activeDraw.digits,activeDraw.won);
-    else drawReelReveal(g,activeDraw);
-  } else if(!hasResult) {
-    g.drawImage(standby,0,0);
-  } else {
-    const enamel=g.createLinearGradient(0,135,0,451);
-    enamel.addColorStop(0,'#301c1b');enamel.addColorStop(.45,'#9d503b');enamel.addColorStop(1,'#241518');
-    g.fillStyle='#191315';g.fillRect(0,0,600,600);
-    reels.forEach((value,index)=>{
-      const x=61+index*162;
-      box(x,194,151,197,9,enamel,'#a58158');
-      txt(value,x+76,345,'bold italic 148px Georgia','#ffe2ac');
-    });
-  }
+  if(activeDraw) drawReelReveal(g,activeDraw);
+  else g.drawImage(standby,0,0);
   g.restore();
 }
 function launchTrack(offset=0){
@@ -228,10 +215,17 @@ function advanceTray(dt){
 function warn(message,duration=1){
   warningMessage=message;warningUntil=now+duration;
 }
+let directionAlert='', directionSince=0;
 function updateWarning(){
-  const value=mode==='right'&&force<95?'▶ 우타 필요 · 손잡이를 끝까지 돌리세요':
-    mode==='normal'&&force>=95?'◀ 좌타로 돌리세요 · 우타 구슬 반환':now<warningUntil?warningMessage:'';
+  const direction=mode==='right'&&force<95?'right':mode==='normal'&&force>=95?'left':'';
+  if(direction!==directionAlert){directionAlert=direction;directionSince=now;}
+  const compact=mode==='right'&&(!direction||now-directionSince>=1.65);
+  const round='R'+(1+Math.floor(rightHits/10))+'/3';
+  const value=compact?(direction?'▶ 우타 필요 · 끝까지 돌리세요':'우타 진행')+'  ·  '+round+'  ·  '+(rightHits%10)+'/10':
+    direction==='right'?'▶ 우타 필요 · 손잡이를 끝까지 돌리세요':
+    direction==='left'?'◀ 좌타로 돌리세요 · 우타 구슬 반환':now<warningUntil?warningMessage:'';
   const el=$('warning');
+  if(compact!==el.classList.contains('compact'))el.classList.toggle('compact',compact);
   if(value && el.textContent!==value)el.textContent=value;
   el.hidden=!value;
 }
@@ -302,7 +296,8 @@ function advanceBattle(dt){
   const finish=reelStopTime(activeDraw);
   if(activeDraw.elapsed<finish+reelTiming.hold)return;
   const result=activeDraw;
-  activeDraw=null;reels=result.digits;hasResult=true;
+  activeDraw=null;
+  drawReelReveal(standby.getContext('2d'),result,true);
   if(result.won){
     wins++;mode='right';rightHits=0;gateOpened=now;warningUntil=0;
     msg('대당첨! 우타로 어태커를 노리세요.');
@@ -428,6 +423,8 @@ function frame(ms){
   while(acc>=1/120){step(1/120);acc-=1/120}
   const fx=activeDraw?.won && activeDraw.elapsed>=reelStopTime(activeDraw)?'jackpot':mode==='right'?'payout':'idle';
   if(cabinet.dataset.fx!==fx)cabinet.dataset.fx=fx;
+  const reach=isReachLive(activeDraw)?'on':'off';
+  if(cabinet.dataset.reach!==reach)cabinet.dataset.reach=reach;
   const ready=chanceIsReady(activeDraw);
   if($('chancePush').disabled===ready)$('chancePush').disabled=!ready;
   const chanceState=ready?'ready':'idle';
