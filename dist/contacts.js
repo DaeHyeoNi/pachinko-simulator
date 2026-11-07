@@ -1,8 +1,9 @@
-// A ball is 10 board units wide. Guided launches and behind-glass service
-// returns do not exchange momentum with the loose balls on the playfield.
+// A ball is 10 board units wide. The covered launch, warp and recessed stage
+// are separate depth layers from the free pin field.
 const BALL_DIAMETER = 10;
 function contactLayer(ball) {
-  if (ball.launch || ball.route === 'service') return 0;
+  if (ball.launch || ball.route==='warp' || ball.route==='stage') return 0;
+  if (ball.awaitingReceiver) return 2;
   return ball.route === 'field' ? 1 : 2;
 }
 
@@ -23,6 +24,52 @@ function contactSubsteps(balls, dt) {
   return count;
 }
 
+// Sweep the ball center against shafts enlarged by the ball radius. A shallow
+// chord can cross the circle even when both ends of a microstep are outside.
+function movePastPins(ball, pins, dt, onHit) {
+  let remaining=dt;
+  for(let contact=0; remaining>1e-8 && contact<8; contact++){
+    const vx=ball.vx,vy=ball.vy,speed2=vx*vx+vy*vy;
+    const endX=ball.x+vx*remaining,endY=ball.y+vy*remaining;
+    const left=Math.min(ball.x,endX),right=Math.max(ball.x,endX);
+    const top=Math.min(ball.y,endY),bottom=Math.max(ball.y,endY);
+    let first=null,firstTime=remaining;
+    for(const pin of pins){
+      const radius=BALL_DIAMETER*.5+pin.r;
+      if(pin.x+radius<left || pin.x-radius>right || pin.y+radius<top || pin.y-radius>bottom)continue;
+      const x=ball.x-pin.x,y=ball.y-pin.y;
+      const gap=x*x+y*y-radius*radius;
+      let entry=0;
+      if(gap>=-1e-8){
+        const dot=x*vx+y*vy;
+        if(dot>=0 || speed2===0)continue;
+        const discriminant=dot*dot-speed2*gap;
+        if(discriminant<=0)continue;
+        entry=Math.max(0,gap/(-dot+Math.sqrt(discriminant)));
+      }
+      if(entry>firstTime)continue;
+      first=pin;firstTime=entry;
+    }
+    if(!first){ball.x=endX;ball.y=endY;return;}
+    const x=ball.x+vx*firstTime-first.x,y=ball.y+vy*firstTime-first.y;
+    const distance=Math.hypot(x,y),speed=Math.sqrt(speed2);
+    const nx=distance>1e-9?x/distance:(speed?-vx/speed:0);
+    const ny=distance>1e-9?y/distance:(speed?-vy/speed:-1);
+    const clearance=BALL_DIAMETER*.5+first.r+.00001;
+    ball.x=first.x+nx*clearance;ball.y=first.y+ny*clearance;
+    const approach=vx*nx+vy*ny;
+    if(approach<0){
+      // A ball already rolling on the metal keeps its tangent velocity. Only
+      // an audible impact bounces away from the surface.
+      const restitution=approach< -18?.56:0;
+      ball.vx-=(1+restitution)*approach*nx;ball.vy-=(1+restitution)*approach*ny;
+      if(onHit)onHit(first,-approach,ball.x);
+    }
+    remaining-=firstTime;
+  }
+  // At a simultaneous multi-pin pinch the unresolved interval stays at this
+  // last contact; the next microstep begins there, never beyond a shaft.
+}
 // Centers and inner half-widths of the clear right-side trough. The first point
 // meets the launch ellipse at its release tangent; the fork shares one hinge.
 const rightTrough = {
@@ -36,6 +83,18 @@ const rightTrough = {
     [553,502,11],[532,523,12],[506,539,13],[487,550,13]]
 };
 function containChute(ball) {
+  if(ball.y<receiver.mouthY){
+    // Past the tongue, the outer steel arch bends the ball into the sleeve.
+    const v=(ball.y-176)/167;
+    const extent=Math.sqrt(Math.max(.01,1-v*v));
+    const wall=300+291*extent, slope=-291*v/(167*extent);
+    const maxX=wall-5*Math.hypot(1,slope);
+    if(ball.x<=maxX)return;
+    ball.x=maxX;
+    const vn=Math.max(0,ball.vx-slope*ball.vy)/(1+slope*slope);
+    ball.vx-=vn;ball.vy+=vn*slope;
+    return true;
+  }
   let points=rightTrough[ball.route];
   if(ball.y<=rightTrough.supportGateY)points=rightTrough.common;
   else if(ball.y<=rightTrough.gateY&&ball.route!=='support')points=rightTrough.lowerCommon;

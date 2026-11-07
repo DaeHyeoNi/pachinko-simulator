@@ -1,7 +1,7 @@
 'use strict';
 
 // The LCD works in the game's 600×600 scene coordinates. Keep critical
-// readouts inside its octagonal glass, clear of the physical ball lanes.
+// readouts inside the molded glass, clear of the physical ball lanes.
 globalThis.drawRushScreen = function drawRushScreen(c, state) {
   const {kind,remaining,chain,earned,elapsed,spinAge,hit,ending} = state;
   const st = kind === 'st', active = spinAge >= 0;

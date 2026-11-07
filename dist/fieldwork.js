@@ -11,12 +11,22 @@ function createFieldwork() {
   // Coordinates describe shaft centers in the collision plane. Each group
   // is an actual set of pins; the gaps between groups are open to the drain.
   function row(x,y,dx,dy,count,cant=0){
-    for(let i=0;i<count;i++)nail(x+dx*i,y+dy*i,1.85,cant);
+    // For a touching row, the tops of successive contact circles must always
+    // fall downhill. Otherwise a stationary ball can balance in their valley.
+    // Isolated pins with a full ball of daylight retain their original pitch.
+    const pitch2=dx*dx+dy*dy,contactRadius=5+shaftRadius;
+    const length=count-1;
+    const intervals=pitch2>=4*contactRadius*contactRadius ? length :
+      Math.max(length,Math.ceil(length*pitch2/(1.94*contactRadius*Math.abs(dy))));
+    for(let i=0;i<=intervals;i++){
+      const along=length*i/intervals;
+      nail(x+dx*along,y+dy*along,1.85,cant);
+    }
   }
   const wheel={x:79,y:327,angle:-.46,speed:0,inertia:147};
   const heso={x:300,y:464,halfSpacing:8.2,nailRadius:shaftRadius};
   // Incoming fan narrows to two three-pin columns directly above the rotor.
-  row(49,130,12,-8,4); row(95,148,-11,8,3);
+  row(49,130,12,-8,4); row(90,148,-11,8,3);
   row(40,183,13,-6,3); nail(89,191);
   row(44,215,12,6,3); nail(91,234);
   row(36,245,6,9,3); row(66,253,5,7,3);
@@ -24,12 +34,12 @@ function createFieldwork() {
   // Catch a portion of the inward wheel exits on the road. Each run has a
   // different pitch; the last single jump nail stands clear of the mouth.
   row(58,354,7,4.1,5); row(105,374,7.4,3.6,6);
-  row(152,393,7.4,3.45,5); row(196,414,7.6,3.3,6);
-  row(240,435,7.6,3.25,5);
-  nail(282,459,1.95,-.25);
+  row(155,393,7.4,3.45,5); row(196,414,7.6,3.3,6);
+  row(246,435,7.6,3.25,5);
+  nail(280,460.8,1.95,-.25);
   nail(heso.x-heso.halfSpacing,heso.y,1.96,-.55);
   nail(heso.x+heso.halfSpacing,heso.y,1.96,.55);
-  nail(318,459,1.95,.25);
+  nail(320,460.8,1.95,.25);
   // Short right-side banks are interspersed with the independent acrylic
   // transfer hardware. The lower outside nails disperse misses toward OUT.
   row(508,144,11,6,4); row(550,181,-9,8,3);
@@ -207,5 +217,27 @@ function drawFieldwork(ctx, field, now) {
     ctx.globalAlpha=Math.min(.68,p.light*5.5);
     oval(ctx,p.x-p.headRadius*.22,p.y-p.headRadius*.47,p.headRadius*.48,p.headRadius*.21,-.31,'#ffffdf');
   }
+  ctx.restore();
+}
+
+
+// A ball can graze the narrow shaft while passing behind the wider front cap.
+// Copy only that cap from the same cached artwork, leaving the shaft behind it.
+function drawOccludingNailCaps(ctx,field,balls){
+  if(!field.art)return;
+  ctx.save();ctx.beginPath();
+  let visible=false;
+  for(const ball of balls){
+    if(ball.launch || ball.route!=='field')continue;
+    for(const p of field.pegs){
+      const dx=ball.x-p.x,dy=ball.y-p.y;
+      const reach=5+p.headRadius+.5;
+      if(dx*dx+dy*dy>reach*reach)continue;
+      ctx.moveTo(p.x+.15+p.headRadius*1.02,p.y+.32);
+      ctx.ellipse(p.x+.15,p.y+.32,p.headRadius*1.02,p.headRadius*.96,.05,0,Math.PI*2);
+      visible=true;
+    }
+  }
+  if(visible){ctx.clip();ctx.drawImage(field.art,0,0,600,600);}
   ctx.restore();
 }

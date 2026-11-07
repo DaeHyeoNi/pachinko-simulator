@@ -20,23 +20,24 @@ let bonusStartedAt=0;
 standby.width=standby.height=600;
 drawBattle(standby.getContext('2d'),1.05,0,[0,0,0],false);
 // One outline drives both collisions and the molded display surround.
-const displayOutline = [
-  [175,59], [419,73], [489,112], [489,308],
-  [420,357], [169,354], [105,308], [105,109]
-];
+const displayOutline=makeDisplayOutline();
+const bezelBacking=makeBezelBacking(displayOutline);
 // The LCD glass stays flat inside its gasket. A separate clear molded hood
 // above it has a crown and two downhill shoulders, visible at their contact lines.
-const roofCap=[displayOutline[0],[294,36],[301,35.5],[308,36],displayOutline[1]];
+const roofCap=[bezelTopLeft,[294,36],[301,35.5],[308,36],bezelTopRight];
 const roofEdges=roofCap.slice(1).map((v,i)=>[...roofCap[i],...v]);
 const rails = [...field.rails, ...roofEdges, ...displayOutline.map(([x,y],i)=>{
   const [u,v] = displayOutline[(i+1)%displayOutline.length];
   return [x,y,u,v];
-})];
+}),[receiver.x,receiver.clearanceY+7,571,153],
+  ...rightTrough.common.slice(1).map(([x,y,w],i)=>{
+    const [startX,startY,startWidth]=rightTrough.common[i];
+    return [startX-startWidth,startY,x-w,y];
+  })];
 // An even chrome gasket separates the upper LCD from the surrounding pin lanes.
 const lcd = {
-  glass: [[177,66],[416,80],[482,116],[482,304],
-    [418,350],[171,347],[112,304],[112,113]],
-  centerX: 297, centerY: 208, width: 370
+  glass:displayOutline.map(([x,y])=>[297+(x-297)*.973,207+(y-207)*.968]),
+  centerX:297,centerY:207,width:344
 };
 const handle = new RotaryHandle($('handle'), value => {force=value;});
 
@@ -46,22 +47,12 @@ function metal(y,h){let grd=g.createLinearGradient(0,y,0,y+h);[[0,'#f1d3a0'],[.1
 function box(x,y,w,h,r,c,stroke){g.beginPath();g.roundRect(x,y,w,h,r);g.fillStyle=c;g.fill();if(stroke){g.strokeStyle=stroke;g.lineWidth=2;g.stroke()}}
 function txt(t,x,y,font,c){g.textAlign='center';g.font=font;g.fillStyle=c;g.fillText(t,x,y)}
 function drawDisplay() {
-  function traceBezel(points, rounding) {
-    g.beginPath();
-    points.forEach(([x,y],i)=>{
-      const count=points.length;
-      const [px,py]=points[(i+count-1)%count], [nx,ny]=points[(i+1)%count];
-      const inScale=rounding/Math.hypot(px-x,py-y);
-      const outScale=rounding/Math.hypot(nx-x,ny-y);
-      const entryX=x+(px-x)*inScale, entryY=y+(py-y)*inScale;
-      if(i===0)g.moveTo(entryX,entryY);
-      else g.lineTo(entryX,entryY);
-      g.quadraticCurveTo(x,y,x+(nx-x)*outScale,y+(ny-y)*outScale);
-    });
-    g.closePath();
+  function traceBezel(points){
+    g.beginPath();points.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();
   }
   g.save();
   g.lineJoin='round';
+  if(bezelBacking)g.drawImage(bezelBacking,0,0,600,600);
   g.beginPath();
   roofCap.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));
   g.closePath();
@@ -76,14 +67,9 @@ function drawDisplay() {
   traceBezel(displayOutline,3);
   g.fillStyle='#364950'; g.fill();
   g.strokeStyle='#182932'; g.lineWidth=2.3; g.stroke();
-  const facetColors=['#c8d9da','#e1ebea','#546b7a','#8d9ca2','#84949d','#b7c9cb','#536875','#cbd6d7'];
-  for(let i=0;i<displayOutline.length;i++) {
-    const j=(i+1)%displayOutline.length;
-    const face=[displayOutline[i],displayOutline[j],lcd.glass[j],lcd.glass[i]];
-    g.beginPath();face.forEach(([x,y],k)=>k?g.lineTo(x,y):g.moveTo(x,y));g.closePath();
-    g.fillStyle=facetColors[i];g.fill();
-    line(...lcd.glass[i],...lcd.glass[j],'#111c24',3);
-  }
+  const trim=g.createLinearGradient(130,100,459,332);
+  for(const [at,color] of [[0,"#e9fbff"],[.16,"#7396ae"],[.32,"#c9dde6"],[.45,"#3b5368"],[.62,"#bed8e8"],[.83,"#687791"],[1,"#e9faff"]])trim.addColorStop(at,color);
+  g.fillStyle=trim;g.fill();
   traceBezel(displayOutline,3);g.strokeStyle='#e0e8e7';g.lineWidth=1.3;g.stroke();
   traceBezel(lcd.glass,3.5);g.strokeStyle='#d4edf05c';g.lineWidth=1.4;g.stroke();
   g.clip();
@@ -102,7 +88,7 @@ function drawDisplay() {
 function launchTrack(offset=0){
   const path=new Path2D();
   path.moveTo(16-offset,533);path.lineTo(16-offset,176);
-  path.ellipse(300,176,284+offset,150+offset,0,Math.PI,Math.PI+transferAngle);
+  path.ellipse(300,176,284+offset,150+offset,0,Math.PI,Math.PI*1.5);
   return path;
 }
 const launchGroove=launchTrack(),launchGlassLip=launchTrack(5.4);
@@ -116,6 +102,10 @@ function drawCoveredLaunch(){
   g.globalAlpha=1;
   g.lineWidth=10;g.strokeStyle='#63839824';g.stroke(launchGroove);
   g.lineWidth=1.15;g.strokeStyle='#c1d4d264';g.stroke(launchGlassLip);
+  g.beginPath();g.moveTo(300,crestY+4);
+  g.quadraticCurveTo((300+receiver.x)/2,crestY+4,receiver.x,receiver.clearanceY+7);
+  g.lineWidth=2.5;g.strokeStyle='#364a584f';g.stroke();
+  g.lineWidth=.85;g.strokeStyle='#d5eef48c';g.stroke();
   g.restore();
 }
 let gatePose=0, supportGatePose=0, lastGateFrame=0;
@@ -124,7 +114,8 @@ function supportDoorOpen(){
 }
 function drawChute(){
   g.save();
-  g.lineJoin='round';g.lineCap='round';
+  g.lineJoin='round';
+  g.lineCap='round';
   for(const [route,points] of Object.entries(rightTrough)) {
     if(!Array.isArray(points))continue;
     const active=(attacker.open&&['common','lowerCommon','attacker'].includes(route))||
@@ -153,6 +144,8 @@ function drawChute(){
     line(x,y+1,x+2,y-2,mode==='right'?'#f4d9a4':'#a5cbd4',1.6);
   }
   // The clear transfer sleeve marks where a full-strength shot enters the lane.
+  line(receiver.x,receiver.clearanceY+7,571,153,'#16303b',5);
+  line(receiver.x,receiver.clearanceY+7,571,153,'#b8d5d8',2.4);
   g.translate(577,139);g.rotate(-.15);
   box(-11,-3,22,6,1.8,'#526872','#d6dfdd');
   g.fillStyle='#152831';g.fillRect(-6,-2,12,4);g.restore();
@@ -196,6 +189,11 @@ function draw(){let d=Math.min(2,devicePixelRatio||1),size=Math.max(1,Math.round
 let sh=g.createRadialGradient(300,260,170,300,280,390);sh.addColorStop(0,'#0c080800');sh.addColorStop(1,'#120c09c9');g.fillStyle=sh;g.fillRect(0,0,600,600);
 drawCoveredLaunch();
 drawDisplay();
+drawStageHardware(g);
+for(const ball of balls){
+  if(ball.route==='warp'||ball.route==='stage')tray.drawPlayfieldBall(g,ball);
+}
+drawStageGlass(g);
 drawFieldwork(g,field,now);
 // Only the opening between the two gold nails accepts a start ball.
 const mouth=field.heso;
@@ -204,11 +202,11 @@ line(mouth.x-8,mouth.y+8,mouth.x+8,mouth.y+8,'#080808',4);
 txt('始動',mouth.x,mouth.y+29,'bold 10px serif','#f3cc81');
 drawChute();drawGates();
 for(const ball of balls){
-  if(ball.launch)continue;
-  if(ball.route==='service')drawServiceDrain(g,ball);
-  else tray.drawPlayfieldBall(g,ball);
+  if(ball.launch||ball.route==='warp'||ball.route==='stage')continue;
+  tray.drawPlayfieldBall(g,ball);
 }
 
+drawOccludingNailCaps(g,field,balls);
 }
 function msg(value){$('log').textContent=value}
 function stackCount(){return waiting.length + Number(Boolean(activeDraw))}
@@ -226,7 +224,7 @@ function status(){
   if($('stackCount')) $('stackCount').textContent=count+' / 5';
   $('phase').textContent=insertion?'지폐 인식 중':mode==='empty'?'지폐 투입 대기':mode==='right'?
     '우타 · '+attacker.round+'/'+bonusRounds+' 라운드 · '+(attacker.open?'개방':'닫힘')+' · '+attacker.hits+'/10':
-    mode==='support'?(rush.kind==='st'?'RUSH':'찬스타임')+' · 남은 '+rush.remaining+'회 · '+rush.chain+'연속':activeDraw?'헤소 추첨 중':'일반 · 좌타';
+    mode==='support'?(rush.kind==='st'?'RUSH':'찬스타임')+' · 남은 '+rush.remaining+'회 · '+rush.chain+'연속':activeDraw?'헤소 추첨 중':'일반 · 헤소 노림';
   $('insert').disabled=Boolean(insertion)||stock>=250||payout>0;
   $('handle').inert=mode==='empty'||Boolean(insertion);
 }
@@ -430,14 +428,21 @@ function bounce(b,x,y,r,coef){
   b.x=x+nx*r;b.y=y+ny*r;
   const speed=b.vx*nx+b.vy*ny;
   if(speed>=0)return false;
-  b.vx-=speed*(1+coef)*nx;b.vy-=speed*(1+coef)*ny;
-  if(Math.abs(nx)<.045)b.vx+=(rand()<.5?-1:1)*15;
+  const restitution=speed< -18?coef:0;
+  b.vx-=speed*(1+restitution)*nx;b.vy-=speed*(1+restitution)*ny;
   return true;
 }
+function recordPinHit(pin,speed,x){
+  pin.light=.12;BallAudio.pin(sound?ac:null,speed,x);
+}
 function advanceBall(b,dt){
-  b.previousX=b.x;b.previousY=b.y;b.freeStep=!b.launch&&b.route!=='service';
+  b.previousX=b.x;b.previousY=b.y;b.freeStep=!b.launch;
   b.t+=dt;
-  if(b.route==='service')return advanceServiceDrain(b,dt);
+  if(b.route==='warp'||b.route==='stage'){
+    b.freeStep=false;moveStageBall(b,dt,balls);
+    if(sound)BallAudio.rail(ac,b.route==='warp'?b.tubeSpeed:Math.abs(b.vx),b.x);
+    return false;
+  }
   if(b.launch){
     if(runLaunchGuide(b,dt)){
       payout++;
@@ -447,8 +452,9 @@ function advanceBall(b,dt){
     if(sound)BallAudio.rail(ac,Math.hypot(b.vx,b.vy),b.x);
     return false;
   }
-  b.vy+=510*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;
+  b.vy+=510*dt;
   if(b.route!=='field'){
+    b.x+=b.vx*dt;b.y+=b.vy*dt;
     if(!b.crossedSupportGate&&b.y>=rightTrough.supportGateY){
       b.crossedSupportGate=true;
       if(b.route==='attacker'&&mode==='support')b.route=supportDoorOpen()?'support':'return';
@@ -465,14 +471,12 @@ function advanceBall(b,dt){
     if(containChute(b)&&sound)BallAudio.rail(ac,Math.hypot(b.vx,b.vy),b.x);
     return false;
   }
+  // A cabinet crossfall of one tenth of a degree also lets a perfectly
+  // centered test ball roll off a solitary pin. Acceleration is continuous.
+  b.vx+=.89*dt;
+  movePastPins(b,pegs,dt,recordPinHit);
   if(b.x<10||b.x>590){b.x=Math.max(10,Math.min(590,b.x));b.vx*=-.66}
   if(b.y<8){b.y=8;b.vy=Math.abs(b.vy)*.72}
-  for(const p of pegs){
-    if(Math.abs(b.x-p.x)>10||Math.abs(b.y-p.y)>10)continue;
-    const nx=b.x-p.x,ny=b.y-p.y;
-    const impactSpeed=Math.max(0,-(b.vx*nx+b.vy*ny)/Math.max(.01,Math.hypot(nx,ny)));
-    if(bounce(b,p.x,p.y,p.r+5,.56)){p.light=.12;BallAudio.pin(sound?ac:null,impactSpeed,b.x)}
-  }
   const wheelSpeed=Math.hypot(b.vx,b.vy);
   if(collideWindmill(b,field,dt))BallAudio.wheel(sound?ac:null,wheelSpeed,b.x);
   for(const [x,y,a,z] of rails){
@@ -489,6 +493,7 @@ function advanceBall(b,dt){
 }
 function finishBallStep(b,dt){
   if(!b.freeStep)return false;
+  if(enterRightReceiver(b)){containChute(b);return false}
   if(b.route!=='field'){
     const path=rightTrough[b.route];
     if(b.y<path[path.length-1][1])return false;
@@ -499,11 +504,12 @@ function finishBallStep(b,dt){
     return true;
   }
   const mouth=field.heso;
+  tryStageEntry(b,balls);
+  if(b.route!=='field')return false;
   if(b.previousY<mouth.y && b.y>=mouth.y){
     const crossingX=b.previousX+(b.x-b.previousX)*(mouth.y-b.previousY)/(b.y-b.previousY);
     if(mode==='normal' && Math.abs(crossingX-mouth.x)<=mouth.halfSpacing-mouth.nailRadius-5){score();return true}
   }
-  advanceUnsticking(b,dt,field,rails);
   return enteredOut(b,field);
 }
 function step(dt){
@@ -520,6 +526,7 @@ function advancePlayfield(dt){
     advanceFieldwork(field,tick);
     for(let i=balls.length-1;i>=0;i--)if(advanceBall(balls[i],tick))balls.splice(i,1);
     resolveCrownContacts(balls);
+    resolveStageContacts(balls);
     resolveBallContacts(balls,field,rails,sound?playBallContact:null);
     for(let i=balls.length-1;i>=0;i--)if(finishBallStep(balls[i],tick))balls.splice(i,1);
   }

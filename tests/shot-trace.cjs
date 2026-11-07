@@ -3,9 +3,7 @@
 // --revision=<commit> runs precisely the same shots against an earlier machine.
 // --trace=<filename.json> saves the first 3 trajectories for each strength.
 const fs = require('node:fs');
-const path = require('node:path');
-const {execFileSync} = require('node:child_process');
-const root = path.resolve(__dirname,'..');
+const loadMachine=require('./headless-machine.cjs');
 const args = Object.fromEntries(process.argv.slice(2).map(arg=>arg.slice(2).split('=')));
 const strengths = (args.strengths || '10,15,30,45,60,75,85,90,94,95,100').split(',').map(Number);
 const sample = Number(args.shots || 250);
@@ -13,29 +11,29 @@ const seed = Number(args.seed || 918733);
 const cadence = Number(args.cadence || .6);
 if (!Number.isFinite(cadence) || cadence <= 0 || !Number.isFinite(seed)) throw Error('Invalid cadence or seed');
 if (!Number.isInteger(sample) || sample<1 || strengths.some(s=>s<=0 || s>100 || !Number.isFinite(s))) throw Error('Invalid shots or strength');
-function read(file) {
-  return args.revision
-    ? execFileSync('git',['show',args.revision+':dist/'+file],{cwd:root,encoding:'utf8'})
-    : fs.readFileSync(path.join(root,'dist',file),'utf8');
-}
-const source=['fieldwork.js','contacts.js','flow.js','game.js'].map(read).join('\n');
-const empty = ()=>{};
-const element = {getContext:empty,querySelectorAll:()=>[],setAttribute:empty};
-const environment = {
-  document:{querySelector:()=>element,getElementById:()=>element,createElement:()=>element,addEventListener:empty},
-  BallTray:class {take(){return true;}},RotaryHandle:class {},BanknoteAcceptor:class {},RushSession:class {},
-  Path2D:class {moveTo(){}lineTo(){}ellipse(){}},drawBattle:empty,BallAudio:{pin:empty,wheel:empty,launch:empty},
-  requestAnimationFrame:empty
-};
 // Run the actual fire / advancePlayfield with simultaneous shots at cabinet rate.
 // Only external drawing, UI and the subsequent lottery are bypassed.
 function measure(sample,strength,includeTrace,cadence) {
   mode='normal'; stock=sample; force=strength;
   status=()=>{}; msg=()=>{}; score=()=>{hits++;};
   const result={strength,shots:sample,heso:0,out:0,weak:0,right:0,service:0,timeout:0,escaped:0,
-    wheel:0,nudged:0,nearMouth:0,medianSeconds:0,p95Seconds:0,hesoPercent:0};
+    rightBankBalls:0,rightPinsHit:0,rightBankHeso:0,rightBankDirectHeso:0,rightBankOut:0,
+    wheel:0,nudged:0,nearMouth:0,warp:0,stage:0,groove:0,stageHeso:0,medianSeconds:0,p95Seconds:0,hesoPercent:0};
   const roofEvents=[], timeoutLocations=[], durations=[], lanes=Array(12).fill(0), paths=[], recoveries=new Map();
   const observed = new WeakMap();
+  const struckPins=new Set();
+  // Track each free ball through the production collision callback, including
+  // a later stage visit. A nearby pass without a contact impulse doesn't count.
+  if(typeof movePastPins==='function'){
+    const sweep=movePastPins;
+    movePastPins=(ball,pins,dt,onHit)=>sweep(ball,pins,dt,(pin,speed,x)=>{
+      if(pin.x>490&&ball.route==='field'){
+        struckPins.add(pin);
+        observed.get(ball).rightBank=true;
+      }
+      if(onHit)onHit(pin,speed,x);
+    });
+  }
   const oldWheel=collideWindmill, oldFinish=finishBallStep, oldAdvance=advanceBall;
   collideWindmill=(b,f,dt)=>{
     const contact=oldWheel(b,f,dt);
@@ -45,6 +43,16 @@ function measure(sample,strength,includeTrace,cadence) {
   function done(b,outcome) {
     const item=observed.get(b);
     result[outcome]++;durations.push(b.t);
+    if(item.rightBank){
+      result.rightBankBalls++;
+      if(outcome==='out')result.rightBankOut++;
+      if(outcome==='heso'){
+        result.rightBankHeso++;
+        if(!item.stage)result.rightBankDirectHeso++;
+      }
+    }
+    for(const flag of ['warp','stage','groove'])if(item[flag])result[flag]++;
+    if(item.stage && outcome==='heso')result.stageHeso++;
     for(const flag of ['wheel','nudged','nearMouth','escaped'])if(item[flag]) result[flag]++;
     if(item.samples)paths.push({shot:item.shot,outcome,points:item.samples});
   }
@@ -82,24 +90,30 @@ function measure(sample,strength,includeTrace,cadence) {
     advancePlayfield(1/120);
     for(let i=balls.length-1;i>=0;i--){
       const b=balls[i],item=observed.get(b);
+      if(b.route==='warp')item.warp=true;
+      if(b.route==='stage'){item.stage=true;if(b.inGroove)item.groove=true;}
       if(b.x < -5 || b.x > 605 || (b.y>605 && b.route!=='service') || b.y< -5) item.escaped=true;
       if(item.samples&&tick%10===0)item.samples.push([+b.x.toFixed(1),+b.y.toFixed(1)]);
       if(b.t>40){timeoutLocations.push([b.x,b.y,b.vx,b.vy]);done(b,'timeout');balls.splice(i,1);}
     }
   }
   durations.sort((a,b)=>a-b);
+  result.rightPinsHit=struckPins.size;
+  if(typeof movePastPins!=='function'){
+    for(const key of ['rightBankBalls','rightPinsHit','rightBankHeso','rightBankDirectHeso','rightBankOut'])result[key]=null;
+  }
   result.hesoPercent=+(result.heso*100/sample).toFixed(2);
   result.medianSeconds=+durations[Math.floor(sample*.5)].toFixed(2);
   result.p95Seconds=+durations[Math.floor(sample*.95)].toFixed(2);
   return {result,lanes,roofEvents,timeoutLocations,recoveries:[...recoveries].sort((a,b)=>b[1]-a[1]).slice(0,8),paths,
     geometry:{pegs:pegs.length,rails:rails.length,wheel:[field.wheel.x,field.wheel.y],drain:field.drain}};
 }
-const execute=new Function(...Object.keys(environment),'Math',source+'\nreturn ('+measure.toString()+');');
+const execute=loadMachine(measure,args.revision);
 const report=strengths.map(strength=>{
   let state=seed;
   const random=Object.create(Math);
   random.random=()=>((state=(Math.imul(1664525,state)+1013904223)>>>0)/4294967296);
-  return execute(...Object.values(environment),random)(sample,strength,Boolean(args.trace),cadence);
+  return execute(random,sample,strength,Boolean(args.trace),cadence);
 });
 if(args.json)fs.writeFileSync(args.json,JSON.stringify({revision:args.revision||'working',seed,cadence,report},null,2));
 if(args.trace)fs.writeFileSync(args.trace,JSON.stringify(report.map(v=>({strength:v.result.strength,paths:v.paths}))));
