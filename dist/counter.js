@@ -6,11 +6,11 @@ const segmentShapes=[
   '3,14 13,14 15,16 13,18 3,18 1,16'
 ];
 const digitMasks=[63,6,91,79,102,109,125,7,127,111];
-function renderCounter(spins,wins,chain,history){
-  for(const [id,value,width] of [['normalSpins',spins,4],['jackpots',wins,2],['chain',chain,2]]){
+function renderCounter(spins,wins,history){
+  for(const [id,value,width] of [['normalSpins',spins,3],['jackpots',wins,2],['previousStart',history.at(-1)??0,3]]){
     const panel=document.getElementById(id);
     if(panel.dataset.value===String(value))continue;
-    const digits=String(value).padStart(width,' ');
+    const digits=String(value).padStart(width,id==='normalSpins'?'0':' ');
     const groups=Array.from(digits,(digit,i)=>{
       const bits=digit===' '?0:digitMasks[Number(digit)];
       return '<g transform="translate('+i*22+' 0)">'+segmentShapes.map((shape,j)=>

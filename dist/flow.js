@@ -1,6 +1,6 @@
 // The handle compresses one spring. Its available energy is expressed as
 // the height a ball could climb on the guide before coming to rest.
-const launcher = {startY:533, bendY:176, radiusX:284, radiusY:150, gravity:2600};
+const launcher = {startY:533, bendY:176, radiusX:284, radiusY:390, gravity:2600};
 const riseToBend=launcher.startY-launcher.bendY;
 const receiver={mouthY:150};
 const fieldGravity=510;

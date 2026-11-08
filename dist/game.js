@@ -16,32 +16,29 @@ const striker={loadedAt:null,compression:0,release:null};
 const shotInterval=.60,releaseTime=5/120;
 const field=createFieldwork();
 const pegs=field.pegs;
+const nailPhoto=typeof Image==='undefined'?null:new Image();
+if(nailPhoto)nailPhoto.src='cabinet-photo.webp';
+const titleRecess=typeof Image==='undefined'?null:new Image();
+if(titleRecess)titleRecess.src='title-recess.webp';
+const titleMotion={travel:0,light:0,hue:0};
 const bank=new BanknoteAcceptor();
 const standby=document.createElement('canvas');
 let bonusStartedAt=0, roundStartedAt=0, normalSpins=0;
 const firstHitHistory=[];
 standby.width=standby.height=600;
-drawReelReveal(standby.getContext('2d'),{stage:'short',digits:[4,5,1],elapsed:5,patrolOffset:0},true);
+const idleTicket={stage:'short',digits:[4,5,1],elapsed:5,patrolOffset:0};
+drawReelReveal(standby.getContext('2d'),idleTicket,true);
 // One outline drives both collisions and the molded display surround.
 const displayOutline=makeDisplayOutline();
-const bezelBacking=makeBezelBacking(displayOutline);
-// The LCD glass stays flat inside its gasket. A separate clear molded hood
-// above it has a crown and two downhill shoulders, visible at their contact lines.
-const roofCap=[bezelTopLeft,[294,36],[301,35.5],[308,36],bezelTopRight];
+// A sloped molded roof carries crest misses back to the left nail lane.
+const roofCap=[[82,-35],[151,-95],[225,-149],[299,-205],[372,-151],[443,-94],[510,-34]];
 const roofEdges=roofCap.slice(1).map((v,i)=>[...roofCap[i],...v]);
-const rails = [...field.rails, ...roofEdges, ...displayOutline.map(([x,y],i)=>{
-  const [u,v] = displayOutline[(i+1)%displayOutline.length];
+const rails=[...field.rails,...roofEdges,...displayOutline.map(([x,y],i)=>{
+  const [u,v]=displayOutline[(i+1)%displayOutline.length];
   return [x,y,u,v];
-}),
-  ...rightTrough.common.slice(1).map(([x,y,w],i)=>{
-    const [startX,startY,startWidth]=rightTrough.common[i];
-    return [startX-startWidth,startY,x-w,y];
-  })];
-// An even chrome gasket separates the upper LCD from the surrounding pin lanes.
-const lcd = {
-  glass:displayOutline.map(([x,y])=>[297+(x-297)*.973,207+(y-207)*.968]),
-  centerX:297,centerY:207,width:344
-};
+}),...rightTrough.common.slice(1).map(([x,y,w],i)=>{
+  const [a,b,width]=rightTrough.common[i];return [a-width,b,x-w,y];
+})];
 const handle = new RotaryHandle($('handle'), value => {force=value;});
 
 function line(x,y,a,b,color,w){g.beginPath();g.moveTo(x,y);g.lineTo(a,b);g.lineWidth=w;g.strokeStyle=color;g.stroke()}
@@ -54,47 +51,30 @@ function drawDisplay() {
     g.beginPath();points.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();
   }
   g.save();
-  g.lineJoin='round';
-  if(bezelBacking)g.drawImage(bezelBacking,0,0,600,600);
-  g.beginPath();
-  roofCap.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));
-  g.closePath();
-  const hood=g.createLinearGradient(0,35,0,72);
-  hood.addColorStop(0,'#c8f8ff82');hood.addColorStop(.24,'#6f9ba961');
-  hood.addColorStop(.68,'#2433475c');hood.addColorStop(1,'#bfd8e16b');
-  g.fillStyle=hood;g.fill();
-  for(const edge of roofEdges){
-    line(...edge,'#152635c9',4);
-    line(...edge,'#c9e9f4',1.2);
-  }
-  traceBezel(displayOutline,3);
-  g.fillStyle='#364950'; g.fill();
-  g.strokeStyle='#182932'; g.lineWidth=2.3; g.stroke();
-  const trim=g.createLinearGradient(130,100,459,332);
-  for(const [at,color] of [[0,"#e9fbff"],[.16,"#7396ae"],[.32,"#c9dde6"],[.45,"#3b5368"],[.62,"#bed8e8"],[.83,"#687791"],[1,"#e9faff"]])trim.addColorStop(at,color);
-  g.fillStyle=trim;g.fill();
-  traceBezel(displayOutline,3);g.strokeStyle='#e0e8e7';g.lineWidth=1.3;g.stroke();
-  traceBezel(lcd.glass,3.5);g.strokeStyle='#d4edf05c';g.lineWidth=1.4;g.stroke();
+  traceBezel(displayOutline);
   g.clip();
-  g.translate(lcd.centerX,lcd.centerY);
-  const sceneScale=lcd.width/600;
-  g.scale(sceneScale,sceneScale);g.translate(-300,-300);
+  // Cover the full gasket even at the two raised corners of the title molding.
+  g.translate(299,141);g.scale(.70,.63);g.translate(-300,-300);
   if(activeDraw) drawReelReveal(g,activeDraw);
   else if(mode==='right'){
     const finished=attacker.round===bonusRounds && !attacker.open && !attacker.inTransit;
     if(attacker.round===1 && rightHits===0){
       g.drawImage(standby,0,0);
       symbolRibbon(g,'우타 ▶',301,76,'#ffde83');
-    } else drawBonusRound(g,now-bonusStartedAt,attacker.round,attacker.hits,rightHits*15,finished,bonusRounds,rush.chain);
+    } else drawBonusRound(g,now-bonusStartedAt,attacker.round,attacker.hits,rightHits*15,finished,bonusRounds);
   }
   else if(mode==='support') renderSupport(g);
-  else g.drawImage(standby,0,0);
+  else if(!hits){
+    idleTicket.elapsed=5+now;
+    drawReelReveal(g,idleTicket,true);
+  } else g.drawImage(standby,0,0);
+  drawScreenCount(g,displayStock(),mode==='right'||mode==='support'||activeDraw?.counted?rush.chain:0,now);
   g.restore();
 }
 function launchTrack(offset=0){
   const path=new Path2D();
   path.moveTo(16-offset,533);path.lineTo(16-offset,176);
-  path.ellipse(300,176,284+offset,150+offset,0,Math.PI,Math.PI*1.5);
+  path.ellipse(300,176,284+offset,launcher.radiusY+offset,0,Math.PI,Math.PI*1.5);
   return path;
 }
 const launchGroove=launchTrack(),launchGlassLip=launchTrack(5.4);
@@ -109,16 +89,16 @@ function drawCoveredLaunch(){
   g.globalAlpha=1;
   g.lineWidth=10;g.strokeStyle='#63839824';g.stroke(launchGroove);
   g.lineWidth=1.15;g.strokeStyle='#c1d4d264';g.stroke(launchGlassLip);
-  g.beginPath();g.ellipse(300,176,284,150,0,-Math.PI/2,sleeveAngle-Math.PI);
+  g.beginPath();g.ellipse(300,176,284,launcher.radiusY,0,-Math.PI/2,sleeveAngle-Math.PI);
   const guideLit=attacker.open || mode==='support';
   g.lineWidth=14;g.strokeStyle=guideLit?'#ffb34672':'#7aa7bc52';g.stroke();
   for(const offset of [-6.5,6.5]){
-    g.beginPath();g.ellipse(300,176,284+offset,150+offset,0,-Math.PI/2,sleeveAngle-Math.PI);
+    g.beginPath();g.ellipse(300,176,284+offset,launcher.radiusY+offset,0,-Math.PI/2,sleeveAngle-Math.PI);
     g.lineWidth=1.6;g.strokeStyle='#cae9ed';g.stroke();
   }
   for(const angle of [-1.38,-1.26,-1.14]){
-    g.save();g.translate(300+284*Math.cos(angle),176+150*Math.sin(angle));
-    g.rotate(Math.atan2(150*Math.cos(angle),-284*Math.sin(angle)));
+    g.save();g.translate(300+284*Math.cos(angle),176+launcher.radiusY*Math.sin(angle));
+    g.rotate(Math.atan2(launcher.radiusY*Math.cos(angle),-284*Math.sin(angle)));
     g.beginPath();g.moveTo(-2,-3);g.lineTo(2,0);g.lineTo(-2,3);
     g.strokeStyle=guideLit?'#fff4ac':'#bdd8d4';g.lineWidth=1.5;g.stroke();g.restore();
   }
@@ -134,18 +114,6 @@ function drawChute(){
   g.save();
   g.lineJoin='round';
   g.lineCap='round';
-  // Smoked acrylic mounting plate, with a chamfered inboard edge.
-  g.beginPath();g.moveTo(519,98);g.lineTo(583,149);g.lineTo(598,184);
-  g.lineTo(598,452);g.lineTo(572,506);g.lineTo(489,562);g.lineTo(471,546);
-  g.lineTo(510,489);g.lineTo(521,407);g.lineTo(549,318);g.lineTo(551,193);g.closePath();
-  const plate=g.createLinearGradient(500,0,598,0);
-  plate.addColorStop(0,'#182d3ad9');plate.addColorStop(.34,'#698992c2');
-  plate.addColorStop(.44,'#2a414be6');plate.addColorStop(.76,'#101c29ed');plate.addColorStop(1,'#82999cb3');
-  g.fillStyle=plate;g.fill();g.lineWidth=1.5;g.strokeStyle='#b5ced1';g.stroke();
-  for(const [x,y] of [[551,159],[557,301],[533,407],[509,506]]){
-    circle(x,y,3.3,'#182632');circle(x-.3,y-.5,2.4,'#a1abb0');line(x-1,y+1,x+1,y-1,'#34414b',.8);
-  }
-
   for(const [route,points] of Object.entries(rightTrough)) {
     if(!Array.isArray(points))continue;
     const active=(attacker.open&&['common','lowerCommon','attacker'].includes(route))||
@@ -153,7 +121,7 @@ function drawChute(){
     g.beginPath();
     points.forEach(([x,y,w],i)=>i?g.lineTo(x-w,y):g.moveTo(x-w,y));
     for(let i=points.length-1;i>=0;i--){const [x,y,w]=points[i];g.lineTo(x+w,y);}
-    g.closePath();g.fillStyle='#162b359c';g.fill();
+    g.closePath();g.fillStyle='#21374641';g.fill();
     for(const side of [-1,1]){
       // The two branch entrances meet the common trough. Taper the divider
       // into a pointed tongue at the fork instead of sealing it with an end cap.
@@ -164,8 +132,8 @@ function drawChute(){
         const railX=branchDivider&&!i?x:x+side*w;
         if(i)g.lineTo(railX,y);else g.moveTo(railX,y);
       });
-      g.strokeStyle='#152028';g.lineWidth=4.8;g.stroke();
-      g.strokeStyle=active?'#f7c993':'#b3c8ce';g.lineWidth=2.5;g.stroke();
+      g.strokeStyle='#26333998';g.lineWidth=3;g.stroke();
+      g.strokeStyle=active?'#ffcd8d':'#c6d7d185';g.lineWidth=1.7;g.stroke();
       g.strokeStyle='#f4ffff';g.lineWidth=.75;g.stroke();
     }
   }
@@ -214,45 +182,48 @@ function drawGates(){
   g.restore();
   txt('반환',485,570,'bold 9px sans-serif','#c6d3d0');
 }
-function draw(){let d=Math.min(2,devicePixelRatio||1),size=Math.max(1,Math.round(cv.clientWidth*d));if(cv.width!==size){cv.width=cv.height=size}g.setTransform(size/600,0,0,size/600,0,0);g.clearRect(0,0,600,600);
-let sh=g.createRadialGradient(300,260,170,300,280,390);sh.addColorStop(0,'#0c080800');sh.addColorStop(1,'#120c09c9');g.fillStyle=sh;g.fillRect(0,0,600,600);
-drawDisplay();
-drawStageHardware(g);
-for(const ball of balls){
-  if(ball.route==='warp'||ball.route==='stage')tray.drawPlayfieldBall(g,ball);
-}
-drawStageGlass(g);
-drawFieldwork(g,field,now);
-// The launcher inspection window and vertical guide are mounted in front of
-// the metal apron. Incoming balls stay visible all the way from the striker.
-// Only the opening between the two gold nails accepts a start ball.
-const mouth=field.heso;
-box(mouth.x-15,mouth.y+7,30,13,4,'#302e30','#bb935e');
-line(mouth.x-8,mouth.y+8,mouth.x+8,mouth.y+8,'#080808',4);
-txt('始動',mouth.x,mouth.y+29,'bold 10px serif','#f3cc81');
-drawChute();drawGates();drawCoveredLaunch();
-for(const ball of balls){
-  if(ball.launch||ball.route==='warp'||ball.route==='stage')continue;
-  tray.drawPlayfieldBall(g,ball);
-}
-
-drawOccludingNailCaps(g,field,balls);
+function draw(){
+  const d=Math.min(2,devicePixelRatio||1);
+  const size=Math.max(1,Math.round(cv.clientWidth*d));
+  const height=Math.round(size*1260/941);
+  if(cv.width!==size || cv.height!==height){cv.width=size;cv.height=height;}
+  const scale=size/600;
+  g.setTransform(scale,0,0,scale,13*scale,234*scale);
+  g.clearRect(-13,-234,600,height/scale);
+  drawDisplay();
+  drawStageHardware(g);
+  for(const ball of balls){
+    if(ball.route==='warp'||ball.route==='stage')tray.drawPlayfieldBall(g,ball);
+  }
+  drawStageGlass(g);
+  drawFieldwork(g,field);
+  drawChute();drawGates();drawCoveredLaunch();
+  drawTitleLift(g,nailPhoto,titleRecess,titleMotion);
+  for(const ball of balls){
+    if(!ball.launch && ball.route!=='warp' && ball.route!=='stage')tray.drawPlayfieldBall(g,ball);
+  }
+  if(nailPhoto?.naturalWidth){
+    for(const b of balls){
+      if(b.launch || b.route!=='field')continue;
+      for(const p of pegs){
+        if(Math.abs(p.x-b.x)>7 || Math.abs(p.y-b.y)>7)continue;
+        const r=p.headRadius, px=(p.x+13-r)*941/600,py=(p.y+234-r)*941/600;
+        g.save();g.beginPath();g.arc(p.x,p.y,r,0,TAU);g.clip();
+        g.drawImage(nailPhoto,px,py,2*r*941/600,2*r*941/600,p.x-r,p.y-r,2*r,2*r);g.restore();
+      }
+    }
+  }
 }
 function msg(value){$('log').textContent=value}
 function stackCount(){return waiting.length + Number(Boolean(activeDraw))}
+function displayStock(){
+  const right=mode==='support' || (mode==='right' && rush.chain>1);
+  return right ? rush.queue.length+Number(Boolean(supportSpin)) : stackCount();
+}
 function status(){
   for(const [key,value] of Object.entries({stock,shots,hits,wins})) $(key).textContent=value.toLocaleString();
-  renderCounter(normalSpins,wins,mode==='right'||mode==='support'||activeDraw?.counted?rush.chain:0,firstHitHistory);
-  const rightLamps=mode==='support'||(mode==='right'&&rush.chain>1);
-  const active=rightLamps?Boolean(supportSpin):Boolean(activeDraw);
-  const count=rightLamps?rush.queue.length+Number(active):stackCount();
-  const stack=$('stack');
-  Array.from(stack.querySelectorAll('i')).forEach((lamp,index)=>{
-    lamp.classList.toggle('lit',index<count);
-    lamp.classList.toggle('active',index===0 && active);
-  });
-  stack.setAttribute('aria-label','추첨 스택 '+count+' / 5');
-  if($('stackCount')) $('stackCount').textContent=count+' / 5';
+  renderCounter(normalSpins,wins,firstHitHistory);
+  $('stack').setAttribute('aria-label','진행 중인 변동과 보류 '+displayStock()+' / 5');
   $('phase').textContent=insertion?'지폐 인식 중':mode==='empty'?'지폐 투입 대기':mode==='right'?
     '우타 · '+attacker.round+'/'+bonusRounds+' 라운드 · '+(attacker.open?'개방':'닫힘')+' · '+attacker.hits+'/10':
     mode==='support'?(rush.kind==='st'?'RUSH':'찬스타임')+' · 남은 '+rush.remaining+'회 · '+rush.chain+'연속':activeDraw?'헤소 추첨 중':'일반 · 헤소 노림';
@@ -550,9 +521,23 @@ function advanceBall(b,dt){
   // A cabinet crossfall of one tenth of a degree also lets a perfectly
   // centered test ball roll off a solitary pin. Acceleration is continuous.
   b.vx+=.89*dt;
+  // The photographed shafts project toward the glass. A ball wedged between
+  // overlapping heads can roll forward off their tips under the cabinet rake.
+  // Keep integrating its position while it passes those specific shafts.
+  if(b.frontPins && b.y>b.frontUntilY)b.frontPins=null;
+  if(!b.restPocket || Math.hypot(b.x-b.restPocket.x,b.y-b.restPocket.y)>2)
+    b.restPocket={x:b.x,y:b.y,since:b.t};
+  if(b.t-b.restPocket.since>.65){
+    const supporting=pegs.filter(p=>Math.hypot(p.x-b.x,p.y-b.y)<10);
+    if(supporting.length){
+      b.frontPins=new Set([...(b.frontPins||[]),...supporting]);
+      b.frontUntilY=Math.max(...Array.from(b.frontPins,p=>p.y))+6;
+    }
+    b.restPocket=null;
+  }
   movePastPins(b,pegs,dt,recordPinHit);
-  if(b.x<10||b.x>590){b.x=Math.max(10,Math.min(590,b.x));b.vx*=-.66}
-  if(b.y<8){b.y=8;b.vy=Math.abs(b.vy)*.72}
+  if(b.x< -8||b.x>582){b.x=Math.max(-8,Math.min(582,b.x));b.vx*=-.66}
+  if(b.y< -226){b.y=-226;b.vy=Math.abs(b.vy)*.72}
   const wheelSpeed=Math.hypot(b.vx,b.vy);
   if(collideWindmill(b,field,dt))BallAudio.wheel(sound?ac:null,wheelSpeed,b.x);
   for(const [x,y,a,z] of rails){
@@ -612,6 +597,7 @@ const quietCabinet=typeof matchMedia==='function' && matchMedia('(prefers-reduce
 let winCycleStarted=null;
 function moveWinMechanism(fx){
   const style=cabinet.style;
+  titleMotion.travel=0;titleMotion.light=0;
   if(fx==='idle'){
     if(winCycleStarted!==null){
       for(const name of ['--win-beat','--win-phase','--prop-stroke','--prop-wing','--prop-tip'])
@@ -623,6 +609,7 @@ function moveWinMechanism(fx){
   if(winCycleStarted===null)winCycleStarted=now;
   const set=(name,value)=>style.setProperty(name,value.toFixed(4));
   if(quietCabinet.matches){
+    titleMotion.light=fx==='jackpot'?.55:0;titleMotion.hue=28;
     set('--win-beat',0);set('--win-phase',0);set('--prop-stroke',0);set('--prop-wing',0);set('--prop-tip',0);
     return;
   }
@@ -634,6 +621,13 @@ function moveWinMechanism(fx){
   const primary=rise(0,.075)*(1-rise(.28,.48));
   const wings=rise(.54,.66)*(1-rise(.8,.98));
   const strength=opening ? (attacker.round===1?0:.28) : (renewal ? .76 : 1);
+  // A powered drop, two rebounds, then a second shorter stroke with the wings.
+  const movement=renewal?lock/1.30:phase;
+  const envelope=1-reelEase((movement-.83)/.17);
+  const pulse=(start,length)=>Math.sin(Math.PI*Math.max(0,Math.min(1,(movement-start)/length)))**2;
+  titleMotion.travel=strength*envelope*(87*pulse(0,.24)+61*pulse(.23,.26)+40*pulse(.50,.21)+56*pulse(.69,.23));
+  titleMotion.light=strength*envelope*Math.min(1,Math.max(0,lock)*8);
+  titleMotion.hue=(lock*108)%360;
   const beat=strength*Math.exp(-Math.abs(phase-.075)*48);
   set('--prop-stroke',strength*(primary+.42*rise(.65,.73)*(1-rise(.78,.96))));
   set('--prop-wing',strength*(primary+wings));
@@ -660,7 +654,9 @@ $('insert').onclick=insertNote;
 $('chancePush').onclick=()=>{
   if(!chanceIsReady(activeDraw))return;
   activeDraw.pushTime=activeDraw.elapsed;
-  $('chancePush').querySelector('span').animate([{transform:'translateY(0)'},{transform:'translateY(5px) scale(.94)'},{transform:'translateY(0)'}],{duration:320});
+  const dome=$('chancePush');dome.classList.add('pressing');
+  const press=dome.querySelector('span').animate([{transform:'translateY(0)'},{transform:'translateY(5px) scale(.94)'},{transform:'translateY(0)'}],{duration:320});
+  press.onfinish=()=>dome.classList.remove('pressing');
   $('chancePush').disabled=true;
   msg('럭키 찬스 · 중앙 숫자를 확인하세요.');
 };
@@ -673,7 +669,8 @@ $('sound').onclick=()=>{
   sound=!sound;
   if(sound){ac??=new AudioContext();ac.resume();BallAudio.prepare(ac)}
   else if(ac){ac.close();ac=null}
-  $('sound').querySelector('span').textContent='사운드 '+(sound?'ON':'OFF');
+  $('sound').setAttribute('aria-pressed',String(sound));
+  $('sound').title=sound?'사운드 끄기':'사운드 켜기';
 };
 $('help').onclick=()=>{handle.reset();$('guide').showModal()};
 $('close').onclick=()=>$('guide').close();

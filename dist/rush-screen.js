@@ -36,7 +36,7 @@ globalThis.drawRushScreen = function drawRushScreen(c, state) {
   cover.addColorStop(.6,'#08152703');cover.addColorStop(1,'#071324ed');
   c.fillStyle=cover;c.fillRect(0,60,600,470);
   type(st?'ST RUSH':'찬스 타임',300,131,36,color,'center',st);
-  type(chain+'연속',469,452,21,'#fcf0c9');
+
 
   // A single blue/amber sweep responds to each right-start admission.
   // A winning admission continues from the scanner into a combat impact.

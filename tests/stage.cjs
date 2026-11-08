@@ -9,8 +9,8 @@ function arriving(at,vx,vy){
 const outside=arriving(x+halfWidth,0,140);
 stage.tryStageEntry(outside,[outside]);assert.equal(outside.route,'field');
 const outcomes=new Set();let reversed=0;
-for(const vx of [-120,-70,-25,0,45,90,140]){
-  for(const vy of [90,170,260]){
+for(const vx of [-120,-70,-30,0,45,90,140]){
+  for(const vy of [90,170,230]){
     const ball=arriving(x,vx,vy),balls=[ball];
     stage.tryStageEntry(ball,balls);assert.equal(ball.route,'warp');
     let travelled=false,turned=false,min=Infinity,max=-Infinity,frames=0;
@@ -29,8 +29,8 @@ for(const vx of [-120,-70,-25,0,45,90,140]){
 }
 assert.equal(reversed,21);assert.equal(outcomes.size,2);
 // A full-speed warp discharge with forward roll reaches the flared inlet
-// on the return pass. A shallower discharge carries on over the front lip.
-for(const [forwardSpeed,expectGroove] of [[12,true],[6,false]]){
+// on the return pass. A steeper forward discharge carries on over the front lip.
+for(const [forwardSpeed,expectGroove] of [[12,true],[19,false]]){
   const ball={};
   stage.enterStage(ball,188,0,207.5,forwardSpeed);
   for(let step=0;step<1200 && ball.route==='stage';step++)stage.moveStageBall(ball,1/120,[ball]);

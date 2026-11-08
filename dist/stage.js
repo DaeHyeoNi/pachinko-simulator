@@ -5,9 +5,9 @@
 const stageDeck={left:188,right:412,center:300,depth:29};
 // The throat is recessed in the front third of the deck. Balls can bridge
 // its flared inlet on a fast pass, or roll past it if another ball occupies it.
-const stageThroat={halfWidth:7,back:14,front:27,maxCrossSpeed:239};
-const warpMouth={x:94,y:270,halfWidth:8.6};
-const warpPath=[[warpMouth.x,warpMouth.y],[100,279],[106,303],[118,318],[143,339],[165,355],[188,372]];
+const stageThroat={halfWidth:7,back:7.5,front:28,maxCrossSpeed:239};
+const warpMouth={x:74,y:271,halfWidth:8.6};
+const warpPath=[[warpMouth.x,warpMouth.y],[83,282],[85,302],[96,326],[134,347],[165,365],[188,372]];
 const warpLengths=warpPath.slice(1).map(([x,y],i)=>Math.hypot(x-warpPath[i][0],y-warpPath[i][1]));
 const warpLength=warpLengths.reduce((sum,length)=>sum+length,0);
 function deckHeight(x,z){
@@ -30,6 +30,7 @@ function placeInTube(ball){
 }
 function enterStage(ball,x,z,vx,vz){
   ball.route='stage';ball.x=x;ball.z=z;ball.vx=vx;ball.vz=vz;ball.inGroove=false;
+  ball.returnPass=x!==stageDeck.left;
   ball.y=deckHeight(x,z);ball.vy=0;ball.freeStep=false;
 }
 function stageOccupied(balls,ball,x,z){
@@ -71,23 +72,26 @@ function moveStageBall(ball,dt,balls){
     ball.progress=Math.max(ball.progress,Math.min(limit,ball.progress+ball.tubeSpeed*dt));
     placeInTube(ball);
     if(ball.progress>=warpLength && !stageOccupied(balls,ball,stageDeck.left,0)){
-      enterStage(ball,stageDeck.left,0,ball.tubeSpeed*.83,3+Math.min(11,Math.abs(ball.feedAngle)*.09));
+      const crossSpeed=Math.abs(ball.feedAngle);
+      const forwardSpeed=3+Math.min(18,crossSpeed*.09+Math.max(0,crossSpeed-110)*.13);
+      enterStage(ball,stageDeck.left,0,ball.tubeSpeed*.83,forwardSpeed);
     }
     return;
   }
   const dx=ball.x-stageDeck.center;
   if(ball.inGroove){
     ball.vx+=(-115*dx-17*ball.vx)*dt;
-    ball.vz+=38*dt;
+    ball.vz+=80*dt;
   }else{
     // Gravity along the concave surface reverses the ball at each shoulder.
-    ball.vx+=(-7.5*dx-.54*ball.vx)*dt;
-    ball.vz+=(5.2-.18*ball.vz)*dt;
+    ball.vx+=(-7.5*dx-1.85*ball.vx)*dt;
+    ball.vz+=(3.3-.18*ball.vz)*dt;
     // The center groove only catches a ball crossing its opening at the back
     // of the spout. An earlier or faster pass keeps rolling on the main deck.
-    if(Math.abs(dx)<stageThroat.halfWidth && ball.z>=stageThroat.back &&
+    if(ball.vx< -5)ball.returnPass=true;
+    if(ball.returnPass && Math.abs(dx)<stageThroat.halfWidth && ball.z>=stageThroat.back &&
       ball.z<stageThroat.front && Math.abs(ball.vx)<stageThroat.maxCrossSpeed &&
-      !balls.some(other=>other!==ball && other.route==='stage' && other.inGroove)){
+      !balls.some(other=>other!==ball && other.route==='stage' && other.inGroove && Math.abs(other.z-ball.z)<11)){
       ball.inGroove=true;ball.vx*=.09;
     }
   }
@@ -129,7 +133,7 @@ function resolveStageContacts(balls){
   }
 }
 function drawStageHardware(c){
-  c.save();c.lineCap='round';c.lineJoin='round';
+  c.save();c.globalAlpha=.34;c.lineCap='round';c.lineJoin='round';
   function tube(width,color,offset=0){
     c.beginPath();warpPath.forEach(([x,y],i)=>i?c.lineTo(x+offset,y):c.moveTo(x+offset,y));
     c.strokeStyle=color;c.lineWidth=width;c.stroke();

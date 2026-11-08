@@ -35,6 +35,7 @@ function movePastPins(ball, pins, dt, onHit) {
     const top=Math.min(ball.y,endY),bottom=Math.max(ball.y,endY);
     let first=null,firstTime=remaining;
     for(const pin of pins){
+      if(ball.frontPins?.has(pin))continue;
       const radius=BALL_DIAMETER*.5+pin.r;
       if(pin.x+radius<left || pin.x-radius>right || pin.y+radius<top || pin.y-radius>bottom)continue;
       const x=ball.x-pin.x,y=ball.y-pin.y;
@@ -132,11 +133,11 @@ function resolveBallContacts(balls,field,rails,onImpact) {
   }
   function reproject(ball) {
     if(ball.route!=='field'){containChute(ball);return;}
-    if(ball.x<10){ball.x=10;ball.vx=Math.max(0,ball.vx);}
-    if(ball.x>590){ball.x=590;ball.vx=Math.min(0,ball.vx);}
-    if(ball.y<8){ball.y=8;ball.vy=Math.max(0,ball.vy);}
+    if(ball.x< -8){ball.x=-8;ball.vx=Math.max(0,ball.vx);}
+    if(ball.x>582){ball.x=582;ball.vx=Math.min(0,ball.vx);}
+    if(ball.y< -226){ball.y=-226;ball.vy=Math.max(0,ball.vy);}
     for(const p of field.pegs) {
-      if(Math.abs(p.x-ball.x)<9&&Math.abs(p.y-ball.y)<9)project(ball,p.x,p.y,p.r+5);
+      if(!ball.frontPins?.has(p) && Math.abs(p.x-ball.x)<9&&Math.abs(p.y-ball.y)<9)project(ball,p.x,p.y,p.r+5);
     }
     for(const [x,y,a,b] of rails) {
       if(ball.x<Math.min(x,a)-7||ball.x>Math.max(x,a)+7||

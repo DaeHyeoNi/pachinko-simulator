@@ -1,70 +1,42 @@
-// The glass opening is traced from the molded side cheeks down to the
-// shallow lower apron. Sampled curves also form the physical rail surface.
-const bezelTopLeft=[163,87], bezelTopRight=[427,85];
+// LCD gasket traced in the same photograph coordinate space as the nails.
 function makeDisplayOutline(){
-  const outline=[bezelTopLeft];
-  const curves=[
-    [211,67,277,67,303,77], [345,65,392,70,...bezelTopRight],
-    [450,91,477,104,476,128], [476,147,470,152,465,160],
-    [458,170,466,184,462,201], [457,220,469,241,466,266],
-    [464,298,431,313,400,323], [358,340,333,345,297,345],
-    [254,345,213,333,190,324], [159,313,123,302,121,280],
-    [119,248,139,227,139,207], [138,188,122,167,122,145],
-    [120,120,131,101,...bezelTopLeft]
-  ];
-  for(const [cx,cy,dx,dy,x,y] of curves){
-    const [a,b]=outline[outline.length-1];
-    for(let i=1;i<=5;i++){
-      const t=i/5,u=1-t;
-      outline.push([u*u*u*a+3*u*u*t*cx+3*u*t*t*dx+t*t*t*x,
-        u*u*u*b+3*u*u*t*cy+3*u*t*t*dy+t*t*t*y]);
-    }
-  }
-  outline.pop();
-  return outline;
+  const outline=[[173,376],[268,349],[331,335],[340,377],[453,342],[507,360],
+    [574,344],[722,348],[807,313],[809,827],[790,849],[709,841],[675,826],
+    [636,856],[591,861],[551,849],[529,858],[459,857],[435,849],[403,870],
+    [357,875],[318,853],[279,859],[248,846],[212,840],[179,820]];
+  return outline.map(([x,y])=>[x*600/941-13,y*600/941-234]);
 }
-// Stretch the original photographed housing into the newly exposed area.
-// The texture is generated once. Pins and balls remain independent of it.
-function makeBezelBacking(outline){
-  if(typeof Image==='undefined')return null;
-  const canvas=document.createElement('canvas');canvas.width=canvas.height=900;
-  const c=canvas.getContext('2d'),image=new Image();
-  const source=[[175,59],[419,73],[489,112],[489,308],[420,357],[169,354],[105,308],[105,109]];
-  function radius(poly,dx,dy){
-    for(let i=0;i<poly.length;i++){
-      const [x,y]=poly[i],[u,v]=poly[(i+1)%poly.length];
-      const ex=u-x,ey=v-y,den=dx*ey-dy*ex;
-      if(Math.abs(den)<1e-8)continue;
-      const ax=x-297,ay=y-207,s=(ax*dy-ay*dx)/den;
-      const r=(ax*ey-ay*ex)/den;
-      if(r>0&&s>=0&&s<=1)return r;
-    }
-    return 0;
+/* Two physical cast pieces travel on a carriage in front of the LCD. The
+   silhouettes and rest positions use the same photo pixels as the playfield. */
+const castingOutlines=[
+  [[183,252],[223,216],[262,158],[276,137],[337,146],[344,161],[345,139],
+   [407,137],[456,122],[487,155],[481,170],[472,237],[482,265],[458,284],
+   [514,308],[472,325],[450,365],[423,356],[390,329],[320,375],[304,340],
+   [224,382],[207,353],[186,321],[218,304],[210,277],[180,265],[207,257]],
+  [[495,239],[539,207],[526,184],[552,171],[581,136],[622,145],[678,141],
+   [706,146],[747,134],[759,125],[799,152],[776,175],[781,201],[764,229],
+   [787,244],[817,291],[763,308],[742,336],[725,353],[565,367],[574,313],
+   [529,317],[516,292],[497,274],[538,261],[549,243]]
+];
+function drawTitleLift(c,photo,recess,motion){
+  if(!motion.light || !photo?.naturalWidth || !recess?.naturalWidth)return;
+  c.save();c.translate(-13,-234);c.scale(600/941,600/941);
+  c.beginPath();
+  for(const ring of castingOutlines){
+    ring.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();
   }
-  image.onload=()=>{
-    const src=document.createElement('canvas');src.width=src.height=900;
-    const ctx=src.getContext('2d');ctx.drawImage(image,0,0,900,900);
-    let pixels;
-    try{pixels=ctx.getImageData(0,0,900,900).data;}catch{return;}
-    const out=c.createImageData(900,900),rays=2048,bands=[];
-    for(let i=0;i<rays;i++){
-      const theta=i*Math.PI*2/rays,dx=Math.cos(theta),dy=Math.sin(theta);
-      bands.push([radius(source,dx,dy),radius(outline,dx,dy)]);
-    }
-    for(let row=70;row<550;row++)for(let col=140;col<755;col++){
-      const x=col/1.5-297,y=row/1.5-207,r=Math.hypot(x,y);
-      const angle=Math.atan2(y,x)/(2*Math.PI);
-      const [oldR,newR]=bands[Math.round((angle+1)*rays)%rays];
-      const outer=Math.max(oldR,newR)+10;
-      if(r<newR-2||r>outer)continue;
-      const fraction=(r-newR+2)/(outer-newR+2);
-      const sampled=(oldR+4+(outer-oldR-4)*fraction)/r;
-      const from=(Math.round((207+y*sampled)*1.5)*900+Math.round((297+x*sampled)*1.5))*4;
-      const to=(row*900+col)*4;
-      out.data[to]=pixels[from];out.data[to+1]=pixels[from+1];out.data[to+2]=pixels[from+2];
-      out.data[to+3]=Math.min(255,(outer-r)*110);
-    }
-    c.putImageData(out,0,0);
-  };
-  image.src='machine-face.webp';return canvas;
+  c.save();c.clip();c.drawImage(recess,0,0,941,404);c.restore();
+  c.translate(0,motion.travel);
+  c.beginPath();
+  for(const ring of castingOutlines){
+    ring.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();
+  }
+  c.shadowColor='#090609';c.shadowBlur=9;c.shadowOffsetY=6;c.fillStyle='#18131b';c.fill();
+  c.shadowBlur=0;c.shadowOffsetY=0;c.clip();
+  c.drawImage(photo,0,0,941,404,0,0,941,404);
+  const rainbow=c.createLinearGradient(180,125,815,335);
+  for(let i=0;i<=8;i++)rainbow.addColorStop(i/8,'hsl('+((motion.hue+i*48)%360)+' 100% 56%)');
+  c.fillStyle=rainbow;c.globalCompositeOperation='color';c.globalAlpha=motion.light;c.fillRect(175,117,650,272);
+  c.globalCompositeOperation='screen';c.globalAlpha=.33*motion.light;c.fillRect(175,117,650,272);
+  c.restore();
 }

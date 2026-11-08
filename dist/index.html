@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b111b">
   <title>GINKYO | 파칭코</title>
-  <link rel="stylesheet" href="style.css?v=cabinet16">
-  <link rel="stylesheet" href="mechanism.css?v=cabinet16">
-  <link rel="stylesheet" href="handle.css?v=cabinet16">
-  <link rel="stylesheet" href="bank.css?v=cabinet16">
+  <link rel="stylesheet" href="style.css?v=cabinet18">
+  <link rel="stylesheet" href="mechanism.css?v=cabinet18">
+  <link rel="stylesheet" href="handle.css?v=cabinet18">
+  <link rel="stylesheet" href="bank.css?v=cabinet18">
 </head>
 <body>
   <svg aria-hidden="true" class="symbols">
@@ -41,7 +41,7 @@
     <section class="data-meter" aria-label="파칭코 데이터 카운터">
       <div class="readout primary"><span>일반 회전수</span><output id="normalSpins"></output></div>
       <div class="readout"><span>대당첨</span><output id="jackpots"></output></div>
-      <div class="readout"><span>현재 연속</span><output id="chain"></output></div>
+      <div class="readout"><span>직전 초당첨 회전</span><output id="previousStart"></output></div>
       <div class="history"><span>초당첨 회전 이력</span><div id="history" role="img"></div></div>
     </section>
     <div class="machine-body">
@@ -52,13 +52,7 @@
     <section class="cabinet" aria-label="긴교 파칭코 기체">
       <div class="acrylic-rim" aria-hidden="true"></div>
       <div class="screw a"></div><div class="screw b"></div><div class="screw c"></div><div class="screw d"></div>
-      <header class="machine-head">
-        <h1 class="nameplate"><svg viewBox="0 0 42 36" aria-hidden="true"><path d="m1 8 19 12v11L5 20Zm40 0-19 12v11l15-11ZM20 3l9 6-9 7-9-7Z" fill="currentColor"/></svg><span>GINKYO</span><small>PACHINKO</small></h1>
-        <div class="nav">
-        <button id="sound" type="button"><svg aria-hidden="true"><use href="#vol"/></svg><span>사운드 OFF</span></button>
-        <button id="help" type="button"><i aria-hidden="true">?</i> 이용 안내</button>
-      </div>
-      </header>
+
         <div class="inner">
           <div class="lens-fin port" aria-hidden="true"></div>
           <div class="field">
@@ -120,9 +114,9 @@
             <div class="mechanism" aria-hidden="true">
               <div class="wing-port"><div class="wing-arm"><svg viewBox="0 0 190 100"><use href="#wing-base"/><g class="wing-joint"><use href="#wing-tip"/></g></svg></div></div>
               <div class="wing-port starboard"><div class="wing-arm"><svg viewBox="0 0 190 100"><use href="#wing-base"/><g class="wing-joint"><use href="#wing-tip"/></g></svg></div></div>
-              <div class="crest-rail"><svg viewBox="0 0 100 72"><use href="#crest"/></svg></div>
+
             </div>
-            <div id="stack" role="img" aria-label="추첨 스택 0개, 최대 5개"><i></i><i></i><i></i><i></i><i></i></div>
+            <span id="stack" class="sr-only" role="img" aria-label="진행 중인 변동과 보류 0개"></span>
             <div id="warning" role="alert" hidden></div>
           </div>
           <div class="lens-fin starboard" aria-hidden="true"></div>
@@ -141,6 +135,12 @@
         </section>
         <div id="handle"></div>
       </div>
+    </section>
+    </div>
+        <div class="nav">
+        <button id="sound" type="button" aria-pressed="false" aria-label="사운드" title="사운드 켜기"><svg aria-hidden="true"><use href="#vol"/></svg></button>
+        <button id="help" type="button"><i aria-hidden="true">?</i> 이용 안내</button>
+      </div>
       <div class="telemetry">
         <span id="phase" aria-live="polite">지폐 투입 대기</span>
         <dl class="meters" aria-label="세션 기록">
@@ -150,8 +150,6 @@
         </dl>
       </div>
       <p id="log" aria-live="polite">가상 지폐를 넣으면 구슬 250개가 지급됩니다.</p>
-    </section>
-    </div>
     <details class="debug-menu">
       <summary>디버그 메뉴</summary>
       <label><input id="alwaysWin" type="checkbox" autocomplete="off" aria-describedby="winHint"> 항상 당첨</label>
@@ -169,21 +167,21 @@
     <p><b>디버그 메뉴</b>기체 아래의 ‘항상 당첨’을 켜면 결과가 나오기 전인 추첨에서 대당첨 연출을 확인할 수 있습니다. 켜 둔 채 초회 보너스를 마치면 ST로 진입하고, 오른쪽 입상으로 연속 당첨을 시험할 수 있습니다. 기본 설정은 꺼짐입니다.</p>
     <p class="sound-credits">구슬 소리 원음 · <a href="https://freesound.org/people/rubberduckie/sounds/639646/">rubberduckie</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>), <a href="https://freesound.org/people/Ted_Erski/sounds/535286/">Ted_Erski</a> (CC0). 원음에서 구름음과 충돌음을 발췌하고 음량을 조정했습니다.</p><button id="close" type="button">플레이로 돌아가기</button>
   </dialog>
-  <script src="ball-audio.js?v=cabinet16"></script>
-  <script src="tray.js?v=cabinet16"></script>
-  <script src="battle.js?v=cabinet16"></script>
-  <script src="handle.js?v=cabinet16"></script>
-  <script src="fieldwork.js?v=cabinet16"></script>
-  <script src="flow.js?v=cabinet16"></script>
-  <script src="bank.js?v=cabinet16"></script>
-  <script src="reels.js?v=cabinet16"></script>
-  <script src="contacts.js?v=cabinet16"></script>
-  <script src="rush.js?v=cabinet16"></script>
-  <script src="rush-screen.js?v=cabinet16"></script>
-  <script src="bezel.js?v=cabinet16"></script>
-  <script src="stage.js?v=cabinet16"></script>
-  <script src="striker.js?v=cabinet16"></script>
-  <script src="counter.js?v=cabinet16"></script>
-  <script src="game.js?v=cabinet16"></script>
+  <script src="ball-audio.js?v=cabinet18"></script>
+  <script src="tray.js?v=cabinet18"></script>
+  <script src="battle.js?v=cabinet18"></script>
+  <script src="handle.js?v=cabinet18"></script>
+  <script src="fieldwork.js?v=cabinet18"></script>
+  <script src="flow.js?v=cabinet18"></script>
+  <script src="bank.js?v=cabinet18"></script>
+  <script src="reels.js?v=cabinet18"></script>
+  <script src="contacts.js?v=cabinet18"></script>
+  <script src="rush.js?v=cabinet18"></script>
+  <script src="rush-screen.js?v=cabinet18"></script>
+  <script src="bezel.js?v=cabinet18"></script>
+  <script src="stage.js?v=cabinet18"></script>
+  <script src="striker.js?v=cabinet18"></script>
+  <script src="counter.js?v=cabinet18"></script>
+  <script src="game.js?v=cabinet18"></script>
 </body>
 </html>

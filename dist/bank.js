@@ -68,10 +68,7 @@ class BanknoteAcceptor {
     text('GK  716250  A',32,241,'14px monospace','#573f38');
     c.strokeStyle='#8d4536';c.lineWidth=1.5;c.strokeRect(392,188,33,33);
     text('銀京',408,210,'bold 12px serif','#8d4536','center');
-    const tall=document.createElement('canvas');
-    tall.width=270;tall.height=580;
-    const t=tall.getContext('2d');t.translate(270,0);t.rotate(Math.PI/2);t.drawImage(flat,0,0);
-    return tall;
+    return flat;
   }
 
   open(){
@@ -82,66 +79,24 @@ class BanknoteAcceptor {
     const frame=Math.floor(time*60);
     if(frame===this.lastFrame)return;
     this.lastFrame=frame;
-    const c=this.ctx, d=Math.min(2,window.devicePixelRatio||1);
-    if(this.canvas.width!==Math.round(500*d)){this.canvas.width=Math.round(500*d);this.canvas.height=Math.round(370*d)}
-    c.setTransform(d,0,0,d,0,0);
-    const gradient=(y,h,colors)=>{
-      const gr=c.createLinearGradient(0,y,0,y+h);
-      colors.forEach(([p,v])=>gr.addColorStop(p,v));return gr;
-    };
-    const rect=(x,y,w,h,r,fill,stroke)=>{
-      c.beginPath();c.roundRect(x,y,w,h,r);c.fillStyle=fill;c.fill();
-      if(stroke){c.strokeStyle=stroke;c.lineWidth=1;c.stroke()}
-    };
-    const text=(s,x,y,font,color,align='left')=>{c.textAlign=align;c.fillStyle=color;c.font=font;c.fillText(s,x,y)};
-    const clamp=x=>Math.max(0,Math.min(1,x));
-    const smooth=x=>{x=clamp(x);return x*x*(3-2*x)};
-    c.fillStyle=gradient(0,370,[[0,'#363936'],[.37,'#202422'],[.61,'#151716'],[1,'#202321']]);c.fillRect(0,0,500,370);
-    for(let y=1;y<370;y+=3){c.fillStyle=y%2?'#fff1':'#0002';c.fillRect(0,y,500,.45)}
-    rect(22,18,456,334,14,'#252927','#737369');
-    rect(30,26,440,318,11,gradient(26,318,[[0,'#373b39'],[.14,'#1d211f'],[.53,'#111514'],[1,'#323633']]),'#151715');
-    for(const [x,y] of [[41,39],[459,39],[41,330],[459,330]]){
-      rect(x-4,y-4,8,8,4,gradient(y-4,8,[[0,'#9b9c8f'],[.5,'#51564e'],[1,'#73756c']]),'#131513');
-      c.fillStyle='#212521';c.fillRect(x-2.5,y-.65,5,1.3);
+    const c=this.ctx,d=Math.min(2,window.devicePixelRatio||1);
+    if(this.canvas.width!==Math.round(220*d)){
+      this.canvas.width=Math.round(220*d);this.canvas.height=Math.round(220*d);
     }
-    text('紙幣挿入口',65,71,'bold 21px serif','#e8e5d4');
-    const done=time>=2.31;
-    text(done?'인식 완료':time<.8?'지폐 투입':'지폐 인식 중',433,70,'bold 14px sans-serif',done?'#9cd8a1':'#d6c498','right');
-    rect(58,91,384,103,12,gradient(91,103,[[0,'#9a9b8e'],[.08,'#555a54'],[.13,'#2c302d'],[.46,'#171b19'],[.76,'#494e46'],[1,'#77786d']]),'#131512');
-    rect(140,111,220,56,8,gradient(111,56,[[0,'#515650'],[.12,'#20251f'],[.59,'#060906'],[1,'#505449']]),'#111410');
-    rect(167,130,166,26,4,'#070a08','#242b23');
-    for(const x of [187,295]){
-      rect(x,134,18,14,3,'#393b34');
-      for(let j=0;j<4;j++){const y=135+(j*3+Math.floor(time*65))%12;c.fillStyle='#161a16';c.fillRect(x+1,y,16,1)}
+    c.setTransform(d,0,0,d,0,0);c.clearRect(0,0,220,220);
+    const edge=183;
+    if(time>=0 && time<2.45){
+      const ease=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
+      const align=ease(time/.8),feed=ease((time-.84)/1.52);
+      c.save();c.beginPath();c.rect(0,0,edge+1,220);c.clip();
+      c.translate(edge-30*(1-align)+feed*119,43+30*(1-align));
+      c.transform(1,-.2*(1-align)-.08,0,1,0,0);
+      c.drawImage(this.paper,-115,0,115,133);
+      c.restore();
     }
-    const led=done?'#81f2a0':time>.8?'#ffc46b':'#8ed8a4';
-    for(const x of [63,430]){c.shadowBlur=8;c.shadowColor=led;rect(x,124,6,23,2,led);c.shadowBlur=0}
-    text('¥1,000',68,223,'18px Georgia','#a3a89b');
-    const align=smooth(time/.85), feed=smooth((time-.93)/1.21);
-    const top=151+(1-align)*67-192*feed;
-    const noteTop=top;
-    c.save();c.beginPath();c.rect(42,144,416,191);c.clip();
-    c.translate(250+(1-align)*34,0);c.transform(1,(1-align)*-.035,0,1,0,0);
-    const tail=(1-feed), projectedLength=181;
-    for(let i=0;time>=0 && i<96;i++){
-      const u=i/96, v=(i+1)/96;
-      const y=noteTop+projectedLength*u;
-      const curl=Math.sin(u*Math.PI)*tail;
-      const bend=8*curl*Math.sin(time*4.2+u*1.4);
-      const width=128+54*u+11*(1-align);
-      const drift=(1-align)*u*16+bend;
-      const height=(v-u)*projectedLength+.62;
-      if(y+height<144)continue;
-      c.drawImage(this.paper,0,Math.floor(u*580),270,Math.ceil(580/96)+1,drift-width/2,y,width,height);
-      c.fillStyle='rgba(20,25,22,'+(.18*(1-u)+.09*curl)+')';c.fillRect(drift-width/2,y,width,height);
-    }
-    c.restore();
-    rect(166,133,168,11,3,gradient(133,11,[[0,'#51574e'],[.3,'#292e29'],[.78,'#121712'],[1,'#060805']]));
-    c.fillStyle='#c7c8af55';c.fillRect(170,133,160,1);
-    c.fillStyle=gradient(144,9,[[0,'#080b0acc'],[1,'#080b0a00']]);c.fillRect(167,144,166,9);
-    if(done){
-      text('¥1,000',250,256,'bold 38px Georgia','#c9edc5','center');
-      text('구슬 250개 지급',250,282,'14px sans-serif','#d4dccf','center');
-    }
+    if(time<0)return;
+    c.fillStyle='#9d9f875c';c.fillRect(edge+2,24,1,173);
+    c.fillStyle=time>=2.38?'#aff5b2':time>=0?'#ffc786':'#81ad8e';
+    c.fillRect(edge+9,62,2,29);
   }
 }

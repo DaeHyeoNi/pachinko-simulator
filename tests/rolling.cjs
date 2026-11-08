@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const loadMachine=require('./headless-machine.cjs');
 function solitaryPin() {
   mode='normal';
-  const pin=pegs.find(p=>p.x===89&&p.y===191);
+  const pin=pegs.find(p=>p.y>80&&p.y<240&&p.x>25&&p.x<49);
   pegs.splice(0,pegs.length,pin);
   const startY=pin.y-pin.r-5;
   const b={x:pin.x,y:startY,vx:0,vy:0,t:0,route:'field',launch:false};

@@ -92,7 +92,7 @@ function measure(sample,strength,includeTrace,cadence) {
       const b=balls[i],item=observed.get(b);
       if(b.route==='warp')item.warp=true;
       if(b.route==='stage'){item.stage=true;if(b.inGroove)item.groove=true;}
-      if(b.x < -5 || b.x > 605 || (b.y>605 && b.route!=='service') || b.y< -5) item.escaped=true;
+      if(b.x < -13 || b.x > 605 || (b.y>605 && b.route!=='service') || b.y< -234) item.escaped=true;
       if(item.samples&&tick%10===0)item.samples.push([+b.x.toFixed(1),+b.y.toFixed(1)]);
       if(b.t>40){timeoutLocations.push([b.x,b.y,b.vx,b.vy]);done(b,'timeout');balls.splice(i,1);}
     }

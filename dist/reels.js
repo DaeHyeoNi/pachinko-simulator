@@ -1,5 +1,8 @@
 'use strict';
 
+const patrolPlate=new Image();
+patrolPlate.src="patrol.webp";
+
 const reelTiming = {
   leftStop: 3.6, rightStop: 5.8, pushDeadline: 9.65,
   normalStop: 10.0, luckyRun: 4.0, hold: 3.5
@@ -113,6 +116,9 @@ function drawReelReveal(c,ticket,retained=false) {
     drawBattle(c,battleCameraTime(ticket),ticket.variant,ticket.digits,ticket.won);
     const flash=1-reelEase((t-timing.leftStop)/.36);
     if(flash>0){c.fillStyle='rgba(218,242,255,'+flash*.72+')';c.fillRect(0,0,600,600);}
+  } else if(patrolPlate.naturalWidth){
+    const age=t+(ticket.patrolOffset||0);
+    c.drawImage(patrolPlate,-18+8*Math.sin(age*.67),-18+8*Math.cos(age*.48),636,636);
   } else {
     drawPatrol(c,t,ticket.patrolOffset);
   }
@@ -156,6 +162,32 @@ function drawReelReveal(c,ticket,retained=false) {
   if(t>=finish && !retained && ticket.won){
     symbolRibbon(c,'대당첨',427,37,'#fff0aa',reelEase((t-finish)/.18));
     if(t>=finish+2.5 && t<finish+7) drawJackpotAward(c,t-finish-2.5);
+  }
+  c.restore();
+}
+function drawScreenCount(c,count,chain,t){
+  c.save();c.textAlign='right';c.textBaseline='alphabetic';c.lineJoin='round';
+  const label=(value,x,y,font,ink)=>{
+    c.font=font;c.lineWidth=3.5;c.strokeStyle='#201321';c.strokeText(value,x,y);
+    c.fillStyle=ink;c.fillText(value,x,y);
+  };
+  if(chain){
+    const gold=c.createLinearGradient(0,448,0,485);
+    gold.addColorStop(0,'#fffcea');gold.addColorStop(.49,'#ffe49b');gold.addColorStop(.58,'#d5843a');gold.addColorStop(1,'#fff5b7');
+    label(String(chain),502,481,'italic 900 49px Georgia',gold);
+    label('연속',552,477,'900 20px sans-serif','#ffe7a1');
+  }
+  label('보류',461,514,'bold 17px sans-serif','#f8dfae');
+  for(let i=0;i<5;i++){
+    const x=474+i*17,y=507;
+    const glint=i===0 && count ? Math.sin(t*4) : 0;
+    const shine=c.createRadialGradient(x-2+glint,y-3,.3,x,y,7);
+    if(i<count){
+      shine.addColorStop(0,'#fff');shine.addColorStop(.22,'#ecfcff');
+      shine.addColorStop(.45,i===0?'#ffbd48':'#7ccbef');shine.addColorStop(.73,'#29384e');shine.addColorStop(1,'#f5f3df');
+    }else{shine.addColorStop(0,'#73829696');shine.addColorStop(1,'#182435a6');}
+    c.fillStyle=shine;c.beginPath();c.arc(x,y,6.2,0,Math.PI*2);c.fill();
+    c.strokeStyle=i<count?'#fff1c5':'#c4cede66';c.lineWidth=.8;c.stroke();
   }
   c.restore();
 }
