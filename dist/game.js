@@ -441,6 +441,7 @@ function advanceSupport(){
     if(sound && supportSpin.won){
       SceneAudio.battle(ac,supportSpin.variant,supportCameraTime(supportSpin.lastAge),supportCameraTime(age));
       if(supportSpin.lastAge<1.7 && age>=1.7)SceneAudio.impact(ac);
+      SceneAudio.award(ac,supportSpin.lastAge-1.7,age-1.7,true);
     }
     supportSpin.lastAge=age;
     if(supportSpin.won && !supportSpin.counted && age>=1.7){
@@ -481,7 +482,7 @@ function advanceAttacker(){
   }
   mode='support';warningUntil=0;supportStartedAt=now;supportEndedAt=null;supportSpin=null;
   rush.startSupport();
-  msg((rush.kind==='st'?'RUSH 돌입 · 163회':'찬스타임 돌입 · 100회')+' · 우타를 유지하세요.');status();
+  msg((rush.kind==='st'?'RUSH':'찬스타임')+' 돌입 · '+rush.remaining+'회 · 우타를 유지하세요.');status();
 }
 function collectAttacker(){
   attacker.inTransit--;attacker.hits++;rightHits++;payout+=15;rush.earned+=15;

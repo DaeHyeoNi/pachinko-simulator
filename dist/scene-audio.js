@@ -32,6 +32,15 @@ const SceneAudio=(()=>{
   }
   function weapon(c,kind){
     switch(kind){
+      case 'shield':burst(c,3900,600,.16,.18);tone(c,'triangle',712,706,.42,.15);tone(c,'sine',1163,1160,.32,.08);break;
+      case 'prism':[784,988,1319].forEach((hz,i)=>tone(c,'sine',hz,hz,.32,.14,.053*i));break;
+      case 'sonar':tone(c,'sine',850,820,.24,.13);tone(c,'sine',850,820,.22,.052,.15);break;
+      case 'dive':burst(c,1250,320,.35,.18);tone(c,'sine',175,72,.28,.12);break;
+      case 'token':tone(c,'square',988,988,.07,.055);tone(c,'triangle',1480,1480,.16,.16,.055);break;
+      case 'land':tone(c,'sine',165,54,.145,.20);burst(c,1200,410,.09,.15);break;
+      case 'skate':burst(c,2700,5300,.16,.16);break;
+      case 'kick':tone(c,'sine',165,48,.16,.21);break;
+      case 'combo':burst(c,1050,4600,.12,.17);tone(c,'triangle',660,840,.115,.12,.045);break;
       case 'bell':tone(c,'triangle',784,784,.21,.13);tone(c,'sine',1175,1175,.24,.065,.03);break;
       case 'jump':tone(c,'square',294,880,.135,.052);break;
       case 'clap':burst(c,1900,1150,.085,.23);tone(c,'sine',200,105,.105,.16);break;
@@ -50,11 +59,11 @@ const SceneAudio=(()=>{
     [[1.20,'beam'],[2.00,'beam'],[3.03,'rocket'],[4.77,'blade']],
     [[.80,'arc'],[1.68,'arc'],[2.35,'arc'],[4.66,'arc']],
     [[1.10,'cannon'],[3.36,'rocket'],[4.37,'cannon'],[4.90,'beam']],
-    [[1.40,'beam'],[3.05,'bell'],[5.15,'beam']],
-    [[.65,'rocket'],[1.53,'rocket'],[2.41,'rocket'],[3.29,'rocket'],[4.8,'rocket']],
-    [[.55,'jump'],[1.55,'bell'],[2.02,'jump'],[3.05,'bell'],[4.64,'jump']],
-    Array.from({length:12},(_,i)=>[.48*(i+1),i%4===3?'bell':'clap']),
-    [[1.05,'blade'],[2.16,'blade'],[3.22,'blade'],[4.28,'blade']]
+    [[1.40,'shield'],[3.05,'prism'],[5.15,'beam']],
+    [[.24,'sonar'],[.65,'rocket'],[1.0,'dive'],[1.53,'rocket'],[2.41,'rocket'],[2.72,'dive'],[3.29,'rocket'],[4.02,'sonar'],[4.8,'rocket']],
+    [[.55,'jump'],[1.05,'token'],[1.55,'land'],[2.02,'jump'],[2.54,'token'],[3.05,'land'],[4.64,'jump'],[5.23,'token'],[5.83,'land']],
+    Array.from({length:12},(_,i)=>[.48*(i+1),['kick','skate','clap','bell'][i%4]]),
+    [[.93,'blade'],[1.05,'combo'],[2.04,'blade'],[2.16,'combo'],[3.10,'blade'],[3.22,'combo'],[4.16,'blade'],[4.28,'combo']]
   ];
   function battle(c,variant,previous,now){
     if(c?.state!=='running')return;
@@ -103,7 +112,51 @@ const SceneAudio=(()=>{
     }
     if(crosses(finish) && ticket.stage==='battle'){
       impact(c);
-      if(ticket.won)[523,659,784,1047].forEach((hz,i)=>tone(c,'triangle',hz,hz,.39,.16,.08+i*.095));
+    }
+    if(ticket.won)award(c,previous-finish,t-finish);
+  }
+  // Four bars of original syncopated brass over C, F, D minor and G.
+  // Advance on the visual clock, so muting or suspending never queues a backlog.
+  const beatSeconds=60/128;
+  const tune=[
+    [0,72,.5],[.75,76,.22],[1,79,.56],[1.75,76,.22],[2,84,.62],[3,79,.25],[3.5,81,.32],
+    [4,77,.60],[4.75,81,.23],[5,84,.55],[5.75,81,.20],[6,86,.70],[7,84,.24],[7.5,81,.32],
+    [8,77,.50],[8.75,81,.20],[9,86,.63],[10,84,.30],[10.5,81,.32],[11,77,.26],[11.5,74,.32],
+    [12,79,.30],[12.5,83,.30],[13,86,.50],[13.75,83,.21],[14,89,.40],[14.5,86,.35],[15,83,.30],[15.5,79,.34],[16,84,1.55]
+  ];
+  const midi=n=>440*2**((n-69)/12);
+  function brass(c,n,beats){
+    const hz=midi(n),length=beats*beatSeconds;
+    tone(c,'sawtooth',hz*.981,hz,length,.069);
+    tone(c,'triangle',hz*1.006,hz*1.003,length+.025,.12);
+  }
+  function award(c,previous,now,renewal=false){
+    if(c?.state!=='running'||now<0||previous>(renewal?1.3:8.5))return;
+    const crossed=at=>previous<at&&at<=now;
+    if(renewal){
+      for(const [at,n,d] of [[0,76,.35],[.17,79,.36],[.36,83,.45],[.58,84,1.15]]){
+        if(crossed(at)){brass(c,n,d);tone(c,'triangle',midi(n-12),midi(n-12),.2,.13);}
+      }
+      if(crossed(.58))weapon(c,'clap');
+      return;
+    }
+    const oldBeat=previous/beatSeconds,newBeat=now/beatSeconds;
+    for(const [at,n,d] of tune)if(oldBeat<at&&at<=newBeat)brass(c,n,d);
+    for(let eighth=Math.max(0,Math.floor(oldBeat*2)+1);eighth<=Math.min(32,Math.floor(newBeat*2));eighth++){
+      const bar=Math.min(3,Math.floor(eighth/8)),step=eighth%8;
+      const root=eighth===32?36:[36,41,38,43][bar];
+      if(step%2===0){
+        const bass=midi(root+(step===4?7:0));
+        tone(c,'triangle',bass,bass,.245,.21);
+        if(step%4===0)weapon(c,'kick');else burst(c,2300,860,.13,.19);
+      }else{
+        burst(c,7600,5500,.048,.094);
+        if(step===3||step===7){
+          const chord=[root+24,root+24+(bar===2?3:4),root+31];
+          chord.forEach(n=>tone(c,'triangle',midi(n),midi(n),.13,.062));
+        }
+      }
+      if(eighth===32)[60,64,67].forEach(n=>tone(c,'triangle',midi(n),midi(n),.80,.10));
     }
   }
   function push(c){
@@ -114,5 +167,5 @@ const SceneAudio=(()=>{
     if(c?.state!=='running')return;
     tone(c,'sine',142,41,.39,.28);burst(c,3100,260,.30,.23);
   }
-  return {reels,battle,push,impact};
+  return {reels,battle,push,impact,award};
 })();

@@ -15,7 +15,7 @@ function session(firstRoll, forced = false) {
 }
 
 for (const [firstRoll, kind, limit, odds] of [
-  [.589999, 'st', 163, 99.4], [.59, 'chance', 100, 319.7]
+  [.589999, 'st', 30, 99.4], [.59, 'chance', 100, 319.7]
 ]) {
   const {rush, setRoll} = session(firstRoll);
   assert.equal(rush.kind, kind);
@@ -52,7 +52,7 @@ for (const [firstRoll, kind, limit, odds] of [
   assert.equal(rush.chain, 2);
   assert.equal(rush.kind, 'st');
   rush.startSupport();
-  assert.equal(rush.remaining, 163);
+  assert.equal(rush.remaining, 30);
   assert.equal(rush.canAccept(), true);
 }
 

@@ -17,7 +17,7 @@ class RushSession {
     this.kind=force || this.random()<.59 ? 'st' : 'chance';
   }
   startSupport(){
-    this.remaining=this.kind==='st'?163:100;
+    this.remaining=this.kind==='st'?30:100;
   }
   canAccept(){
     return this.queue.length<4 && this.queue.length<this.remaining;
