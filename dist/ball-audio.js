@@ -141,6 +141,7 @@
 
   window.BallAudio=Object.freeze({
     prepare,
+    output:context=>getState(context).master,
     pin:(context,speed,x=300)=>strike(context,'pin',speed,x),
     wheel:(context,speed,x=300)=>strike(context,'wheel',speed,x),
     launch:context=>strike(context,'launch',155,530),

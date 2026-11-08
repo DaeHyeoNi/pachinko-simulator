@@ -26,7 +26,7 @@ globalThis.drawRushScreen = function drawRushScreen(c, state) {
   }
   if(active && hit) {
     const capture = Math.min(1,phase/2.35);
-    drawBattle(c,1.72+capture*4.48,2+(chain%4),[7,7,7],true);
+    drawBattle(c,1.72+capture*4.48,2+(state.sceneChain%4),[7,7,7],true);
   } else {
     drawPatrol(c,elapsed*(st?1.3:.68),st?7.5:1.1);
     c.fillStyle=st?'#134e7f70':'#6b374352';c.fillRect(0,0,600,600);

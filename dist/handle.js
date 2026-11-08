@@ -5,7 +5,7 @@ class RotaryHandle {
     this.container = container;
     this.onChange = onChange;
     this.value = 0;
-    this.locked = false;
+    this.locked = true;
     this.pointer = null;
     this.keys = new Set();
     container.classList.add('rotary-handle');
@@ -17,7 +17,7 @@ class RotaryHandle {
         </div>
         <div class="rh-marks" aria-hidden="true"><span>정지</span><span>우타</span></div>
       </div>
-      <div class="rh-lock-row"><span>손잡이 고정</span><button type="button" class="rh-lock" role="switch" aria-label="손잡이 고정" aria-checked="false"><i></i></button></div>
+      <div class="rh-lock-row"><span>손잡이 고정</span><button type="button" class="rh-lock" role="switch" aria-label="손잡이 고정" aria-checked="true"><i></i></button></div>
       <p class="rh-hint">시계 방향으로 돌려 발사하고, 끝까지 돌려 우타하세요.</p>`;
     this.dial = container.querySelector('.rh-dial');
     this.readout = container.querySelector('.rh-readout b');
@@ -129,7 +129,7 @@ class RotaryHandle {
     if (id !== undefined && this.dial.hasPointerCapture(id)) this.dial.releasePointerCapture(id);
     this.dial.classList.remove('rh-dragging');
     this.keys.clear();
-    this.setLock(false);
+    this.setValue(0);
   }
 }
 

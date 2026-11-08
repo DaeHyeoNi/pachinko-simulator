@@ -30,7 +30,7 @@ for(const vx of [-120,-70,-30,0,45,90,140]){
 assert.equal(reversed,21);assert.equal(outcomes.size,2);
 // A full-speed warp discharge with forward roll reaches the flared inlet
 // on the return pass. A steeper forward discharge carries on over the front lip.
-for(const [forwardSpeed,expectGroove] of [[12,true],[19,false]]){
+for(const [forwardSpeed,expectGroove] of [[3,true],[19,false]]){
   const ball={};
   stage.enterStage(ball,188,0,207.5,forwardSpeed);
   for(let step=0;step<1200 && ball.route==='stage';step++)stage.moveStageBall(ball,1/120,[ball]);
@@ -42,7 +42,18 @@ for(const [forwardSpeed,expectGroove] of [[12,true],[19,false]]){
 const a={},b={};
 stage.enterStage(a,285,11,50,1);
 stage.enterStage(b,294,11,-50,1);
-stage.resolveStageContacts([a,b]);
+const isolated={};stage.enterStage(isolated,390,3,-12,1);
+a.inGroove=true;
+stage.resolveStageContacts([a,b,isolated]);
 assert(a.vx<0 && b.vx>0);
 assert(Math.hypot(a.x-b.x,a.z-b.z)>=10);
+assert(!a.inGroove && !b.inGroove);
+assert(a.spilling && b.spilling);
+for(let i=0;i<120 && (a.route==='stage'||b.route==='stage');i++){
+  for(const ball of [a,b])if(ball.route==='stage')stage.moveStageBall(ball,1/120,[a,b,isolated]);
+  stage.resolveStageContacts([a,b,isolated]);
+}
+assert.equal(a.route,'field');assert.equal(b.route,'field');
+assert.equal(a.inGroove,false);assert.equal(b.inGroove,false);
+assert.equal(isolated.spilling,false);assert.equal(isolated.route,'stage');
 console.log('21 continuous warp journeys, roll reversals, both exits, and stage collisions passed.');

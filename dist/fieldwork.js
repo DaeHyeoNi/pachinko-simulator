@@ -40,26 +40,64 @@ function createFieldwork() {
   }
   // This single open-ended chain goes up the left wall, around the glass and
   // down the right wall. Its only opening is the bottom drain throat.
-  const drain={x:300, y:586, halfWidth:19};
-  const leftSkirt=[[281,594],[281,576],[265,566],[194,550],[123,530],
-    [66,509],[32,487],[18,462],[10,424],[-5,347],[-5,176]];
-  const perimeter=[...leftSkirt];
-  for(let i=1;i<20;i++) {
-    const a=i*Math.PI/20;
-    perimeter.push([300-305*Math.cos(a),176-400*Math.sin(a)]);
-  }
-  for(const [x,y] of leftSkirt.slice().reverse())perimeter.push([600-x,y]);
+  // The center waste opening ends above the gold PUSH housing (photo y=1200).
+  // Even the bottom of the last visible ball clears that front molding.
+  const drain={x:300, y:522, halfWidth:19};
+  const fromPhoto=points=>points.map(([x,y])=>[x*scale-13,y*scale-234]);
+  // Trace the two sides separately. The left cover is solid up to its sloping
+  // top; on the right the collector runs along the top edge of the clear molds.
+  const leftCover=fromPhoto([[164,1094],[163,1030],[162,972],[157,954],
+    [111,937],[61,926],[8,922]]);
+  const leftSkirt=[[281,528],[281,519],[263,511],[207,504],[156,494],[104,480],
+    ...leftCover,[-10,310],[-12,176]];
+  const upperLeft=fromPhoto([[-3,495],[0,422],[25,350],[68,250],[110,185],
+    [162,130],[248,76],[337,39],[411,20],[490,12]]);
+  const upperRight=fromPhoto([[574,22],[663,53],[751,95],[823,160],[881,244],
+    [923,349],[945,466],[952,647]]);
+  const rightCollector=fromPhoto([[920,980],[908,1020],[881,1056],[850,1071],
+    [820,1089],[792,1106],[762,1110],[737,1118],[709,1119],
+    [678,1125],[642,1096],[618,1106],[579,1128],[553,1145],[532,1160]]);
+  // Gaps between the upright acrylic receivers are physical waste apertures.
+  // A ball entering one sinks behind its lip instead of crossing the decal.
+  const rightOutlets=[682,736,800].map(px=>{
+    const x=px*scale-13;
+    const i=rightCollector.findIndex(point=>point[0]<x);
+    const [a,b]=rightCollector[i-1],[u,v]=rightCollector[i];
+    return {x,y:b+(v-b)*(x-a)/(u-a)+1,halfWidth:12};
+  });
+  const perimeter=[...leftSkirt,...upperLeft,...upperRight,...rightCollector,[319,519],[319,528]];
   const hardwareRailCount=rails.length;
-  for(let i=1;i<perimeter.length;i++)rails.push([...perimeter[i-1],...perimeter[i]]);
+  const collectorRails=[];
+  for(let i=1;i<perimeter.length;i++){
+    const start=perimeter[i-1],end=perimeter[i];
+    if(!rightCollector.includes(start)||!rightCollector.includes(end)){
+      rails.push([...start,...end]);continue;
+    }
+    const [a,b]=start,[u,v]=end;
+    const cuts=[a,u];
+    for(const outlet of rightOutlets){
+      for(const edge of [outlet.x-outlet.halfWidth,outlet.x+outlet.halfWidth])
+        if(edge>u && edge<a)cuts.push(edge);
+    }
+    cuts.sort((x,y)=>y-x);
+    const height=x=>b+(v-b)*(x-a)/(u-a);
+    for(let j=1;j<cuts.length;j++){
+      const x=cuts[j-1],y=cuts[j],mid=(x+y)/2;
+      if(x===y || rightOutlets.some(outlet=>Math.abs(mid-outlet.x)<outlet.halfWidth))continue;
+      const segment=[x,height(x),y,height(y)];rails.push(segment);collectorRails.push(segment);
+    }
+  }
 
-  return {pegs,rails,wheel,heso,perimeter,leftSkirt,hardwareRailCount,drain};
+  return {pegs,rails,wheel,heso,perimeter,leftSkirt,collectorRails,rightOutlets,hardwareRailCount,drain};
 }
 
 function enteredOut(ball,field) {
-  const {x,y,halfWidth}=field.drain;
-  if(ball.previousY>=y || ball.y<y)return false;
-  const at=ball.previousX+(ball.x-ball.previousX)*(y-ball.previousY)/(ball.y-ball.previousY);
-  return Math.abs(at-x)<halfWidth;
+  for(const {x,y,halfWidth} of [field.drain,...field.rightOutlets]){
+    if(ball.previousY>=y || ball.y<y)continue;
+    const at=ball.previousX+(ball.x-ball.previousX)*(y-ball.previousY)/(ball.y-ball.previousY);
+    if(Math.abs(at-x)<halfWidth)return true;
+  }
+  return false;
 }
 
 // The four swept vanes are capsules around these same center lines in both passes.

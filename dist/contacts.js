@@ -73,15 +73,16 @@ function movePastPins(ball, pins, dt, onHit) {
 }
 // Centers and inner half-widths of the clear right-side trough. The first point
 // meets the launch ellipse at its release tangent; the fork shares one hinge.
+function moldedLane(points){
+  return points.map(([px,py,w])=>[px*600/941-13,py*600/941-234,w]);
+}
 const rightTrough = {
-  gateY: 445, supportGateY: 344,
-  common: [[580,150,9],[584,183,9],[584,246,9],[580,307,9.5],
-    [575,344,10]],
-  support: [[575,344,10],[569,354,9.8],[558,366,10],[547,378,9.7],[542,389,9.5]],
-  lowerCommon: [[575,344,10],[572,365,10],[562,412,10],[552,445,10]],
-  attacker: [[552,445,10],[546,457,9.5],[537,470,9],[531,481,9]],
-  return: [[552,445,10],[558,456,9],[564,470,9],[564,484,9],
-    [553,502,11],[532,523,12],[506,539,13],[487,550,13]]
+  gateY:952*600/941-234, supportGateY:811*600/941-234,
+  common:moldedLane([[935,603,9],[935,665,9],[931,715,9],[920,770,9],[911,811,9]]),
+  support:moldedLane([[911,811,9],[907,833,9],[897,862,9]]),
+  lowerCommon:moldedLane([[911,811,9],[923,843,10],[924,883,10],[916,931,10],[900,952,10]]),
+  attacker:moldedLane([[900,952,10],[881,966,11],[855,979,13]]),
+  return:moldedLane([[900,952,10],[916,974,10],[919,1008,10],[913,1040,9],[905,1064,9]])
 };
 function containChute(ball) {
   if(ball.y<receiver.mouthY){

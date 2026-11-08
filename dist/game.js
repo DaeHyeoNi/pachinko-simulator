@@ -10,14 +10,20 @@ let bonusRounds=3, supportSpin=null, supportStartedAt=0, supportEndedAt=null;
 const attacker={round:0,hits:0,inTransit:0,open:false,transitionAt:0};
 let stock=0, shots=0, hits=0, wins=0, now=0, lastShot=-1;
 let sound=false, ac, force=0, mode='empty', insertion=0, payout=0, payoutClock=0, rightHits=0;
+let loanRemaining=0;
 let warningUntil=0, warningMessage='', activeDraw=null, waiting=[];
 let balls=[];
 const striker={loadedAt:null,compression:0,release:null};
 const shotInterval=.60,releaseTime=5/120;
 const field=createFieldwork();
 const pegs=field.pegs;
+const freeFieldMask=new Path2D();
+field.perimeter.forEach(([x,y],i)=>i?freeFieldMask.lineTo(x,y):freeFieldMask.moveTo(x,y));
 const nailPhoto=typeof Image==='undefined'?null:new Image();
-if(nailPhoto)nailPhoto.src='cabinet-photo.webp';
+if(nailPhoto){
+  nailPhoto.onload=()=>prepareAcrylicLamps($('guideGlow'),nailPhoto);
+  nailPhoto.src='cabinet-photo.webp';
+}
 const titleRecess=typeof Image==='undefined'?null:new Image();
 if(titleRecess)titleRecess.src='title-recess.webp';
 const titleMotion={travel:0,light:0,hue:0};
@@ -31,7 +37,9 @@ drawReelReveal(standby.getContext('2d'),idleTicket,true);
 // One outline drives both collisions and the molded display surround.
 const displayOutline=makeDisplayOutline();
 // A sloped molded roof carries crest misses back to the left nail lane.
-const roofCap=[[82,-35],[151,-95],[225,-149],[299,-205],[372,-151],[443,-94],[510,-34]];
+const roofCap=[[169,379],[165,267],[203,211],[270,131],[327,108],[459,61],
+  [490,47],[572,67],[688,97],[763,117],[808,146],[829,303],[817,376]]
+  .map(([px,py])=>[px*600/941-13,py*600/941-234]);
 const roofEdges=roofCap.slice(1).map((v,i)=>[...roofCap[i],...v]);
 const rails=[...field.rails,...roofEdges,...displayOutline.map(([x,y],i)=>{
   const [u,v]=displayOutline[(i+1)%displayOutline.length];
@@ -73,8 +81,12 @@ function drawDisplay() {
 }
 function launchTrack(offset=0){
   const path=new Path2D();
-  path.moveTo(16-offset,533);path.lineTo(16-offset,176);
-  path.ellipse(300,176,284+offset,launcher.radiusY+offset,0,Math.PI,Math.PI*1.5);
+  path.moveTo(launchGuideX(launcher.startY)-offset,launcher.startY);
+  for(let i=1;i<=32;i++){
+    const y=launcher.startY-(launcher.startY-launcher.bendY)*i/32;
+    path.lineTo(launchGuideX(y)-offset,y);
+  }
+  path.ellipse(300,176,launcher.leftRadius+offset,launcher.radiusY+offset,0,Math.PI,Math.PI*1.5);
   return path;
 }
 const launchGroove=launchTrack(),launchGlassLip=launchTrack(5.4);
@@ -137,50 +149,36 @@ function drawChute(){
       g.strokeStyle='#f4ffff';g.lineWidth=.75;g.stroke();
     }
   }
-  for(const [x,y] of [[578,159],[583,236],[578,323],[565,399]]){
-    line(x-2,y-2,x,y+1,mode==='right'?'#f4d9a4':'#a5cbd4',1.6);
-    line(x,y+1,x+2,y-2,mode==='right'?'#f4d9a4':'#a5cbd4',1.6);
+  for(const [x,y] of rightTrough.common.slice(1,-1)){
+    line(x-2,y-2,x,y+1,mode==='right'?'#ffda9a':'#b6cdd1',1.2);
+    line(x,y+1,x+2,y-2,mode==='right'?'#ffda9a':'#b6cdd1',1.2);
   }
-  // The clear transfer sleeve marks where a full-strength shot enters the lane.
-
-  g.translate(577,139);g.rotate(-.15);
-  box(-11,-3,22,6,1.8,'#526872','#d6dfdd');
-  g.fillStyle='#152831';g.fillRect(-6,-2,12,4);g.restore();
+  g.restore();
 }
 function drawGates(){
-  const elapsed=Math.max(0,now-lastGateFrame); lastGateFrame=now;
-  const target=attacker.open?1:0;
-  gatePose=target+(gatePose-target)*Math.exp(-12*elapsed);
-  g.save();g.lineCap='round';
-  const supportTarget=supportDoorOpen()?1:0;
-  supportGatePose=supportTarget+(supportGatePose-supportTarget)*Math.exp(-18*elapsed);
-  // The upper tulip feeds the right start sensor independently of the lower attacker.
-  box(527,383,29,15,4,'#142a31','#9abebf');
-  box(532,383,20,8,2,'#0c151d',supportTarget?'#a4fff5':'#758b95');
-  const paddle=-.70-supportGatePose*.9;
-  const tipX2=562+20*Math.cos(paddle),tipY2=356+20*Math.sin(paddle);
-  line(562,356,tipX2,tipY2,'#213740',5);
-  line(562,355,tipX2,tipY2-1,supportTarget?'#91ffeb':'#b8c8cc',2.6);
-  circle(562,356,3,'#d4e0dc');
-  txt('電チュー',542,396,'bold 6px sans-serif',supportTarget?'#b1ffeb':'#bacacd');
-  // The steel door blocks the inner fork at rest. Retracted, it forms the
-  // right lip of the attacker so incoming balls drop into the inner pocket.
-  box(516,474,32,16,4,'#15232c','#adbec0');
-  box(520,473,23,9,3,target?'#351d0e':'#292d30',target?'#ffd08a':'#77888c');
-  const angle=-.56-1.1*gatePose;
-  const hingeX=539,hingeY=453;
-  const tipX=hingeX+21*Math.cos(angle),tipY=hingeY+21*Math.sin(angle);
-  line(hingeX,hingeY,tipX,tipY,'#152129',6);
-  line(hingeX,hingeY-.7,tipX,tipY-.7,target?'#f4b670':'#a0b4ba',3.4);
-  circle(hingeX,hingeY,3.8,'#2c3538');circle(hingeX-.5,hingeY-.7,2,'#e1e0cc');
-  circle(544,486,1.6,target?'#ffd382':'#617575');
-  txt('入賞',531,488,'bold 7px serif',target?'#ffd499':'#bbc9c6');
-  // Rubber-lined outlet in the lower apron returns non-scoring right shots.
-  g.translate(487,550);g.rotate(-.48);
-  box(-13,-2,26,13,4,'#39444a','#9eacac');
-  box(-10,0,20,7,2,'#090e10','#515e62');
-  g.restore();
-  txt('반환',485,570,'bold 9px sans-serif','#c6d3d0');
+  const elapsed=Math.max(0,now-lastGateFrame);lastGateFrame=now;
+  const support=supportDoorOpen();
+  gatePose+=(Number(attacker.open)-gatePose)*(1-Math.exp(-12*elapsed));
+  supportGatePose+=(Number(support)-supportGatePose)*(1-Math.exp(-18*elapsed));
+  for(const [branch,pose,lit,name] of [[rightTrough.support,supportGatePose,support,'電チュー'],
+    [rightTrough.attacker,gatePose,attacker.open,'入賞'],[rightTrough.return,0,false,'반환']]){
+    const [x,y,w]=branch.at(-1);
+    box(x-w-2,y-2,w*2+4,10,2,'#142027','#94a5a6');
+    box(x-w+1,y,w*2-2,4,1,'#070d0e',lit?'#ffcd72':'#677e80');
+    txt(name,x,y+14,'bold 6px sans-serif',lit?'#ffdf9f':'#d0d8d5');
+    if(branch===rightTrough.return)continue;
+    const [hx,hy,hw]=branch[0],angle=-.32-1.03*pose;
+    line(hx-hw,hy+4,hx-hw+hw*1.9*Math.cos(angle),hy+4+hw*1.9*Math.sin(angle),lit?'#ffd482':'#a4b8bb',2.9);
+    circle(hx-hw,hy+4,2.2,'#d0dbd7');
+  }
+  // Faceted collector lip follows the collision surface under the right nails.
+  g.save();g.beginPath();for(const [x,y,u,v] of field.collectorRails){g.moveTo(x,y);g.lineTo(u,v);}
+  g.lineJoin='round';g.strokeStyle='#22343c8a';g.lineWidth=4;g.stroke();
+  g.strokeStyle='#d8f0efb0';g.lineWidth=1.2;g.stroke();g.restore();
+  for(const {x,y,halfWidth} of field.rightOutlets){
+    g.beginPath();g.ellipse(x,y,halfWidth,2.4,-.13,0,TAU);
+    g.fillStyle='#0c131ae8';g.fill();g.strokeStyle='#a7c0c1b5';g.lineWidth=.9;g.stroke();
+  }
 }
 function draw(){
   const d=Math.min(2,devicePixelRatio||1);
@@ -198,9 +196,15 @@ function draw(){
   drawStageGlass(g);
   drawFieldwork(g,field);
   drawChute();drawGates();drawCoveredLaunch();
-  drawTitleLift(g,nailPhoto,titleRecess,titleMotion);
+  // The front apron covers the departing ball. The separate return and
+  // attacker sleeves remain visible beyond the edge of the free field.
+  g.save();g.clip(freeFieldMask);
   for(const ball of balls){
-    if(!ball.launch && ball.route!=='warp' && ball.route!=='stage')tray.drawPlayfieldBall(g,ball);
+    if(!ball.launch && ball.route==='field')tray.drawPlayfieldBall(g,ball);
+  }
+  g.restore();
+  for(const ball of balls){
+    if(!ball.launch && ['return','support','attacker'].includes(ball.route))tray.drawPlayfieldBall(g,ball);
   }
   if(nailPhoto?.naturalWidth){
     for(const b of balls){
@@ -213,6 +217,7 @@ function draw(){
       }
     }
   }
+  drawTitleLift(g,nailPhoto,titleRecess,titleMotion);
 }
 function msg(value){$('log').textContent=value}
 function stackCount(){return waiting.length + Number(Boolean(activeDraw))}
@@ -227,11 +232,15 @@ function status(){
   $('phase').textContent=insertion?'지폐 인식 중':mode==='empty'?'지폐 투입 대기':mode==='right'?
     '우타 · '+attacker.round+'/'+bonusRounds+' 라운드 · '+(attacker.open?'개방':'닫힘')+' · '+attacker.hits+'/10':
     mode==='support'?(rush.kind==='st'?'RUSH':'찬스타임')+' · 남은 '+rush.remaining+'회 · '+rush.chain+'연속':activeDraw?'헤소 추첨 중':'일반 · 헤소 노림';
-  $('insert').disabled=Boolean(insertion)||stock>=250||payout>0;
-  $('handle').inert=mode==='empty'||Boolean(insertion);
+  const loan=$('insert');
+  loan.disabled=Boolean(insertion||loanRemaining);
+  loan.setAttribute('data-first',String(mode==='empty'&&!insertion));
+  const label=insertion?'인식 중':loanRemaining?'지급 중':'구슬 빌리기';
+  if($('loanAction').textContent!==label)$('loanAction').textContent=label;
+
 }
 function insertNote(){
-  if(insertion||payout||stock>=250)return;
+  if(insertion||loanRemaining)return;
   insertion=bank.duration;
   bank.open();
   $('bank').classList.add('inserting');msg('지폐를 인식하고 있습니다.');status();
@@ -244,13 +253,13 @@ function advanceTray(dt){
       bank.close();
       $('bank').classList.remove('inserting');
       if(mode==='empty')mode='normal';
-      payout+=250;msg('지폐 인식 완료 · 구슬 250개를 대여합니다.');status();
+      loanRemaining=250;payout+=loanRemaining;msg('지폐 인식 완료 · 구슬 250개를 대여합니다.');status();
     }
   }
   if(payout){
     payoutClock+=dt;
     while(payout && payoutClock>=.018){
-      payoutClock-=.018;payout--;tray.deposit();stock++;
+      payoutClock-=.018;payout--;if(loanRemaining)loanRemaining--;tray.deposit();stock++;
       status();
     }
     if(!payout)payoutClock=0;
@@ -284,7 +293,7 @@ function seatBall(){
   return true;
 }
 function fire(stroke=force){
-  if((!stock && striker.loadedAt===null)||!stroke||insertion||mode==='empty'||$('guide').open||!seatBall())return;
+  if((!stock && striker.loadedAt===null)||!stroke||mode==='empty'||$('guide').open||!seatBall())return;
   striker.loadedAt=null;
   shots++;lastShot=now;
 
@@ -304,7 +313,7 @@ function advanceStriker(dt){
     }
     return;
   }
-  const canWind=(stock || striker.loadedAt!==null) && force && !insertion && mode!=='empty' && !$('guide').open &&
+  const canWind=(stock || striker.loadedAt!==null) && force && mode!=='empty' && !$('guide').open &&
     now-lastShot>=.15 && seatBall();
   // Compression is proportional to the square root of the ball's launch energy.
   const target=canWind?19*Math.sqrt(launchEnergy(force,.5)/launchEnergy(100,.5)):0;
@@ -373,7 +382,9 @@ function score(){
 }
 function advanceBattle(dt){
   if(!activeDraw)return;
+  const previous=activeDraw.elapsed;
   activeDraw.elapsed+=dt;
+  if(sound)SceneAudio.reels(ac,activeDraw,previous);
   const finish=reelStopTime(activeDraw);
   if(activeDraw.won && !activeDraw.counted && activeDraw.elapsed>=finish){
     rush.beginFirst($('alwaysWin').checked);
@@ -408,7 +419,7 @@ function acceptSupportBall(){
   return true;
 }
 function renderSupport(ctx){
-  drawRushScreen(ctx,{kind:rush.kind,remaining:rush.remaining,chain:rush.chain,earned:rush.earned,
+  drawRushScreen(ctx,{kind:rush.kind,remaining:rush.remaining,chain:rush.chain,sceneChain:supportSpin?.sceneChain??rush.chain,earned:rush.earned,
     elapsed:now-supportStartedAt,spinAge:supportSpin?now-supportSpin.started:-1,
     hit:Boolean(supportSpin?.won),ending:supportEndedAt!==null});
 }
@@ -423,6 +434,11 @@ function advanceSupport(){
   }
   if(supportSpin){
     const age=now-supportSpin.started;
+    if(sound && supportSpin.won){
+      const camera=t=>1.72+Math.min(1,t/2.35)*4.48;
+      SceneAudio.battle(ac,2+(supportSpin.sceneChain%4),camera(supportSpin.lastAge),camera(age));
+    }
+    supportSpin.lastAge=age;
     if(supportSpin.won && !supportSpin.counted && age>=1.7){
       rush.renew();wins++;supportSpin.counted=true;status();
     }
@@ -437,7 +453,7 @@ function advanceSupport(){
     status();
   }
   const next=rush.next();
-  if(next){supportSpin={...next,started:now};status();}
+  if(next){supportSpin={...next,started:now,lastAge:0,sceneChain:rush.chain};status();}
   else if(!rush.remaining){supportEndedAt=now;status();}
 }
 function openAttackerRound(round){
@@ -597,7 +613,11 @@ const quietCabinet=typeof matchMedia==='function' && matchMedia('(prefers-reduce
 let winCycleStarted=null;
 function moveWinMechanism(fx){
   const style=cabinet.style;
-  titleMotion.travel=0;titleMotion.light=0;
+  titleMotion.travel=0;
+  const celebrating=fx!=='idle' || mode==='support';
+  const flash=quietCabinet.matches ? 0 : (.5-.5*Math.cos(now*Math.PI*4));
+  titleMotion.light=celebrating?(quietCabinet.matches ? .72 : .68+.32*flash):0;
+  titleMotion.hue=quietCabinet.matches?26:(now*176)%360;
   if(fx==='idle'){
     if(winCycleStarted!==null){
       for(const name of ['--win-beat','--win-phase','--prop-stroke','--prop-wing','--prop-tip'])
@@ -609,7 +629,6 @@ function moveWinMechanism(fx){
   if(winCycleStarted===null)winCycleStarted=now;
   const set=(name,value)=>style.setProperty(name,value.toFixed(4));
   if(quietCabinet.matches){
-    titleMotion.light=fx==='jackpot'?.55:0;titleMotion.hue=28;
     set('--win-beat',0);set('--win-phase',0);set('--prop-stroke',0);set('--prop-wing',0);set('--prop-tip',0);
     return;
   }
@@ -626,8 +645,6 @@ function moveWinMechanism(fx){
   const envelope=1-reelEase((movement-.83)/.17);
   const pulse=(start,length)=>Math.sin(Math.PI*Math.max(0,Math.min(1,(movement-start)/length)))**2;
   titleMotion.travel=strength*envelope*(87*pulse(0,.24)+61*pulse(.23,.26)+40*pulse(.50,.21)+56*pulse(.69,.23));
-  titleMotion.light=strength*envelope*Math.min(1,Math.max(0,lock)*8);
-  titleMotion.hue=(lock*108)%360;
   const beat=strength*Math.exp(-Math.abs(phase-.075)*48);
   set('--prop-stroke',strength*(primary+.42*rise(.65,.73)*(1-rise(.78,.96))));
   set('--prop-wing',strength*(primary+wings));
@@ -642,6 +659,10 @@ function frame(ms){
   const fx=winning?'jackpot':mode==='right'?'payout':'idle';
   if(cabinet.dataset.fx!==fx)cabinet.dataset.fx=fx;
   moveWinMechanism(fx);
+  if(titleMotion.light || cabinet.style.getPropertyValue('--guide-light')!=='0'){
+    cabinet.style.setProperty('--guide-light',String(titleMotion.light));
+    if(titleMotion.light)cabinet.style.setProperty('--guide-hue',titleMotion.hue+'deg');
+  }
   const reach=isReachLive(activeDraw)?'on':'off';
   if(cabinet.dataset.reach!==reach)cabinet.dataset.reach=reach;
   const ready=chanceIsReady(activeDraw);
@@ -654,6 +675,7 @@ $('insert').onclick=insertNote;
 $('chancePush').onclick=()=>{
   if(!chanceIsReady(activeDraw))return;
   activeDraw.pushTime=activeDraw.elapsed;
+  if(sound)SceneAudio.push(ac);
   const dome=$('chancePush');dome.classList.add('pressing');
   const press=dome.querySelector('span').animate([{transform:'translateY(0)'},{transform:'translateY(5px) scale(.94)'},{transform:'translateY(0)'}],{duration:320});
   press.onfinish=()=>dome.classList.remove('pressing');

@@ -5,7 +5,7 @@
 const stageDeck={left:188,right:412,center:300,depth:29};
 // The throat is recessed in the front third of the deck. Balls can bridge
 // its flared inlet on a fast pass, or roll past it if another ball occupies it.
-const stageThroat={halfWidth:7,back:7.5,front:28,maxCrossSpeed:239};
+const stageThroat={halfWidth:7,back:16,front:24,maxCrossSpeed:145};
 const warpMouth={x:74,y:271,halfWidth:8.6};
 const warpPath=[[warpMouth.x,warpMouth.y],[83,282],[85,302],[96,326],[134,347],[165,365],[188,372]];
 const warpLengths=warpPath.slice(1).map(([x,y],i)=>Math.hypot(x-warpPath[i][0],y-warpPath[i][1]));
@@ -29,7 +29,7 @@ function placeInTube(ball){
   }
 }
 function enterStage(ball,x,z,vx,vz){
-  ball.route='stage';ball.x=x;ball.z=z;ball.vx=vx;ball.vz=vz;ball.inGroove=false;
+  ball.route='stage';ball.x=x;ball.z=z;ball.vx=vx;ball.vz=vz;ball.inGroove=false;ball.spilling=false;
   ball.returnPass=x!==stageDeck.left;
   ball.y=deckHeight(x,z);ball.vy=0;ball.freeStep=false;
 }
@@ -79,13 +79,15 @@ function moveStageBall(ball,dt,balls){
     return;
   }
   const dx=ball.x-stageDeck.center;
-  if(ball.inGroove){
+  if(ball.spilling){
+    ball.vz+=100*dt;
+  }else if(ball.inGroove){
     ball.vx+=(-115*dx-17*ball.vx)*dt;
     ball.vz+=80*dt;
   }else{
     // Gravity along the concave surface reverses the ball at each shoulder.
-    ball.vx+=(-7.5*dx-1.85*ball.vx)*dt;
-    ball.vz+=(3.3-.18*ball.vz)*dt;
+    ball.vx+=(-7.5*dx-.65*ball.vx)*dt;
+    ball.vz+=(5.2-.18*ball.vz)*dt;
     // The center groove only catches a ball crossing its opening at the back
     // of the spout. An earlier or faster pass keeps rolling on the main deck.
     if(ball.vx< -5)ball.returnPass=true;
@@ -122,6 +124,15 @@ function resolveStageContacts(balls){
       const speed=(b.vx-a.vx)*nx+(b.vz-a.vz)*nz;
       if(speed<0){const impulse=-.82*speed;
         a.vx-=impulse*nx;a.vz-=impulse*nz;b.vx+=impulse*nx;b.vz+=impulse*nz;
+      }
+      // Contact knocks both balls out of the groove. They roll to the
+      // front edge from their contact positions before returning to free fall.
+      const side=nx<0?-1:1;
+      for(const [ball,direction] of [[a,-side],[b,side]]){
+        if(ball.spilling)continue;
+        ball.spilling=true;ball.inGroove=false;ball.usedStage=true;
+        ball.vx+=direction*37;
+        ball.vz=Math.max(62,Math.abs(ball.vz)+25);
       }
       for(const ball of [a,b]){
         ball.x=Math.max(stageDeck.left,Math.min(stageDeck.right,ball.x));ball.z=Math.max(0,ball.z);

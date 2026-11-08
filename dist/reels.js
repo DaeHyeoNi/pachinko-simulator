@@ -41,8 +41,8 @@ function reelEase(value) {
 
 // Each episode is authored in camera time. The camera and symbols share the
 // finishing strike even when the player chooses a different moment to PUSH.
-function battleCameraTime(ticket) {
-  const t = ticket.elapsed, finish = reelStopTime(ticket);
+function battleCameraTime(ticket,t=ticket.elapsed) {
+  const finish = reelStopTime(ticket);
   const entry = reelTiming.leftStop;
   if (t < reelTiming.rightStop) return Math.max(0,(t-entry)/(reelTiming.rightStop-entry))*1.7;
   const launch = ticket.lucky ? ticket.pushTime ?? reelTiming.pushDeadline : reelTiming.rightStop;
@@ -66,6 +66,10 @@ function symbolRibbon(c, label, y, size, color, alpha=1) {
   c.restore();
 }
 
+function symbolPhase(remaining,alternate){
+  if(alternate)return 1.1*remaining+1.45*remaining*remaining;
+  return remaining<1.8 ? 1.15*remaining*remaining : 3.726+(remaining-1.8)*4.14;
+}
 function drawSpinningSymbol(c, ticket, index, x, y, size, finish) {
   const t = ticket.elapsed, digit = ticket.digits[index];
   const timing=drawTiming(ticket);
@@ -97,8 +101,7 @@ function drawSpinningSymbol(c, ticket, index, x, y, size, finish) {
     print('×',0);
   } else {
     const alternate = index===1 && ticket.lucky && t>=timing.rightStop;
-    const phase = alternate ? 1.1*remaining+1.45*remaining*remaining :
-      remaining<1.8 ? 1.15*remaining*remaining : 3.726+(remaining-1.8)*4.14;
+    const phase=symbolPhase(remaining,alternate);
     const step=Math.floor(phase), offset=(phase-step)*size*1.16;
     const symbol=n=>alternate ? (n%2===0?digit:digit===7?6:7) : (digit-1+n)%9+1;
     print(symbol(step),offset);
@@ -165,6 +168,41 @@ function drawReelReveal(c,ticket,retained=false) {
   }
   c.restore();
 }
+const ignitionTimes=Array(5).fill(-Infinity);
+let previousEmbers=0;
+function drawEmber(c,x,y,index,t,lit,still){
+  c.save();c.translate(x,y);
+  if(lit){
+    const age=Math.max(0,t-ignitionTimes[index]);
+    const bloom=still?1:.42+.58*reelEase(age/.28);
+    const wave=still?0:Math.sin(t*5.6+index*1.83);
+    const sway=wave*3.6;
+    c.scale(.95,bloom);
+    const halo=c.createRadialGradient(0,-12,2,0,-12,23);
+    halo.addColorStop(0,'#ffbf54aa');halo.addColorStop(.52,'#ff601760');halo.addColorStop(1,'#ff431000');
+    c.fillStyle=halo;c.fillRect(-24,-36,48,48);
+    const outer=c.createLinearGradient(0,-40,0,3);
+    outer.addColorStop(0,'#fff6ad');outer.addColorStop(.32,'#ffbd3e');outer.addColorStop(.65,'#ff5b0c');outer.addColorStop(1,'#b51e19');
+    c.fillStyle=outer;c.strokeStyle='#751f1e';c.lineWidth=1.3;
+    c.beginPath();c.moveTo(-10,0);c.bezierCurveTo(-18,-10,-6,-19,-10,-28);
+    c.quadraticCurveTo(-3,-25,-4,-18);c.bezierCurveTo(2,-24,-3,-35,sway+4,-42);
+    c.bezierCurveTo(sway+2,-30,12,-25,7,-16);c.quadraticCurveTo(12,-18,13,-24);
+    c.bezierCurveTo(16,-12,16,-4,8,0);c.closePath();c.fill();c.stroke();
+    c.fillStyle='#fff094';c.beginPath();c.moveTo(-6,-2);
+    c.bezierCurveTo(-10,-11,0,-14,-1,-22);c.quadraticCurveTo(5,-17,3,-12);
+    c.quadraticCurveTo(7,-14,8,-17);c.quadraticCurveTo(10,-7,5,-2);c.fill();
+    if(!still){
+      const drift=(t*.85+index*.37)%1;
+      c.globalAlpha=1-drift;c.fillStyle='#ffe88b';c.beginPath();
+      c.arc(sway+drift*4,-39-12*drift,1.7-drift*.8,0,Math.PI*2);c.fill();c.globalAlpha=1;
+    }
+  }
+  const bead=c.createRadialGradient(-2,-4,.3,1,-1,7.5);
+  bead.addColorStop(0,lit?'#fffce1':'#a3998e');bead.addColorStop(.30,lit?'#ffe279':'#62574f');
+  bead.addColorStop(.60,lit?'#d75b18':'#302a2a');bead.addColorStop(1,lit?'#772b19':'#151319');
+  c.fillStyle=bead;c.strokeStyle=lit?'#ffe09e':'#a17d656e';c.lineWidth=1;
+  c.beginPath();c.ellipse(0,-1,7.2,5.7,0,0,Math.PI*2);c.fill();c.stroke();c.restore();
+}
 function drawScreenCount(c,count,chain,t){
   c.save();c.textAlign='right';c.textBaseline='alphabetic';c.lineJoin='round';
   const label=(value,x,y,font,ink)=>{
@@ -174,20 +212,12 @@ function drawScreenCount(c,count,chain,t){
   if(chain){
     const gold=c.createLinearGradient(0,448,0,485);
     gold.addColorStop(0,'#fffcea');gold.addColorStop(.49,'#ffe49b');gold.addColorStop(.58,'#d5843a');gold.addColorStop(1,'#fff5b7');
-    label(String(chain),502,481,'italic 900 49px Georgia',gold);
-    label('연속',552,477,'900 20px sans-serif','#ffe7a1');
+    label(String(chain),502,468,'italic 900 49px Georgia',gold);
+    label('연속',552,464,'900 20px sans-serif','#ffe7a1');
   }
-  label('보류',461,514,'bold 17px sans-serif','#f8dfae');
-  for(let i=0;i<5;i++){
-    const x=474+i*17,y=507;
-    const glint=i===0 && count ? Math.sin(t*4) : 0;
-    const shine=c.createRadialGradient(x-2+glint,y-3,.3,x,y,7);
-    if(i<count){
-      shine.addColorStop(0,'#fff');shine.addColorStop(.22,'#ecfcff');
-      shine.addColorStop(.45,i===0?'#ffbd48':'#7ccbef');shine.addColorStop(.73,'#29384e');shine.addColorStop(1,'#f5f3df');
-    }else{shine.addColorStop(0,'#73829696');shine.addColorStop(1,'#182435a6');}
-    c.fillStyle=shine;c.beginPath();c.arc(x,y,6.2,0,Math.PI*2);c.fill();
-    c.strokeStyle=i<count?'#fff1c5':'#c4cede66';c.lineWidth=.8;c.stroke();
-  }
+  const still=Boolean(quietCabinet.matches);
+  for(let i=previousEmbers;i<count;i++)ignitionTimes[i]=t;
+  previousEmbers=count;
+  for(let i=0;i<5;i++)drawEmber(c,423+i*31,525,i,t,i<count,still);
   c.restore();
 }
