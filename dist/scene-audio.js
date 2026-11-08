@@ -159,6 +159,17 @@ const SceneAudio=(()=>{
       if(eighth===32)[60,64,67].forEach(n=>tone(c,'triangle',midi(n),midi(n),.80,.10));
     }
   }
+  function payoutChime(c){
+    if(c?.state!=='running')return;
+    // Two short bell arpeggios resolve before the next ball at normal cadence.
+    const notes=[76,79,84,79,83,86];
+    for(let i=0;i<notes.length;i++){
+      const offset=(i<3?0:.245)+(i%3)*.052;
+      const hz=midi(notes[i]),length=i%3===2 ? .17 : .095;
+      tone(c,'sine',hz*1.012,hz,length,.21,offset);
+      tone(c,'triangle',hz*2,hz*2,length*.65,.052,offset+.004);
+    }
+  }
   function push(c){
     if(c?.state!=='running')return;
     tone(c,'sine',210,95,.10,.21);tone(c,'triangle',480,1050,.29,.18,.04);
@@ -167,5 +178,5 @@ const SceneAudio=(()=>{
     if(c?.state!=='running')return;
     tone(c,'sine',142,41,.39,.28);burst(c,3100,260,.30,.23);
   }
-  return {reels,battle,push,impact,award};
+  return {reels,battle,push,impact,award,payoutChime};
 })();

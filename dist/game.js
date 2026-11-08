@@ -486,6 +486,7 @@ function advanceAttacker(){
 }
 function collectAttacker(){
   attacker.inTransit--;attacker.hits++;rightHits++;payout+=15;rush.earned+=15;
+  if(sound)SceneAudio.payoutChime(ac);
   status();
 }
 function bounce(b,x,y,r,coef){
