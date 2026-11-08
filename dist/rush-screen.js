@@ -2,6 +2,10 @@
 
 // The LCD works in the game's 600×600 scene coordinates. Keep critical
 // readouts inside the molded glass, clear of the physical ball lanes.
+function supportCameraTime(age){
+  if(age<=1.7)return 1.72+(5.83-1.72)*Math.max(0,age)/1.7;
+  return Math.min(6.395,5.83+(age-1.7)*.55);
+}
 globalThis.drawRushScreen = function drawRushScreen(c, state) {
   const {kind,remaining,chain,earned,elapsed,spinAge,hit,ending} = state;
   const st = kind === 'st', active = spinAge >= 0;
@@ -25,8 +29,7 @@ globalThis.drawRushScreen = function drawRushScreen(c, state) {
     c.restore();return;
   }
   if(active && hit) {
-    const capture = Math.min(1,phase/2.35);
-    drawBattle(c,1.72+capture*4.48,2+(state.sceneChain%4),[7,7,7],true);
+    drawBattle(c,supportCameraTime(phase),state.variant,[7,7,7],true);
   } else {
     drawPatrol(c,elapsed*(st?1.3:.68),st?7.5:1.1);
     c.fillStyle=st?'#134e7f70':'#6b374352';c.fillRect(0,0,600,600);

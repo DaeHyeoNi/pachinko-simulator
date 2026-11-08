@@ -325,7 +325,7 @@ function advanceStriker(dt){
   }
 }
 // Each entry queues a complete presentation alongside its independently drawn outcome.
-const battleScenes = ['검격 결투','에너지 포격전','궤도 미사일 요격','공중 추격전','전자기 역습','장갑열차 공성전'];
+const battleScenes = ['검격 결투','에너지 포격전','궤도 미사일 요격','공중 추격전','전자기 역습','장갑열차 공성전','거울 신전','심해 편대전','용광로 점프','빙판 리듬 대결','협곡 콤보 레이드'];
 let upcomingScenes = [];
 let lastScene = -1;
 function nextBattleScene(){
@@ -420,7 +420,7 @@ function acceptSupportBall(){
   return true;
 }
 function renderSupport(ctx){
-  drawRushScreen(ctx,{kind:rush.kind,remaining:rush.remaining,chain:rush.chain,sceneChain:supportSpin?.sceneChain??rush.chain,earned:rush.earned,
+  drawRushScreen(ctx,{kind:rush.kind,remaining:rush.remaining,chain:rush.chain,variant:supportSpin?.variant,earned:rush.earned,
     elapsed:now-supportStartedAt,spinAge:supportSpin?now-supportSpin.started:-1,
     hit:Boolean(supportSpin?.won),ending:supportEndedAt!==null});
 }
@@ -436,8 +436,8 @@ function advanceSupport(){
   if(supportSpin){
     const age=now-supportSpin.started;
     if(sound && supportSpin.won){
-      const camera=t=>1.72+Math.min(1,t/2.35)*4.48;
-      SceneAudio.battle(ac,2+(supportSpin.sceneChain%4),camera(supportSpin.lastAge),camera(age));
+      SceneAudio.battle(ac,supportSpin.variant,supportCameraTime(supportSpin.lastAge),supportCameraTime(age));
+      if(supportSpin.lastAge<1.7 && age>=1.7)SceneAudio.impact(ac);
     }
     supportSpin.lastAge=age;
     if(supportSpin.won && !supportSpin.counted && age>=1.7){
@@ -454,7 +454,7 @@ function advanceSupport(){
     status();
   }
   const next=rush.next();
-  if(next){supportSpin={...next,started:now,lastAge:0,sceneChain:rush.chain};status();}
+  if(next){supportSpin={...next,started:now,lastAge:0,variant:next.won?nextBattleScene():null};status();}
   else if(!rush.remaining){supportEndedAt=now;status();}
 }
 function openAttackerRound(round){
@@ -685,7 +685,7 @@ $('chancePush').onclick=()=>{
 };
 $('alwaysWin').onchange=()=>{
   if($('alwaysWin').checked && activeDraw && activeDraw.elapsed<reelStopTime(activeDraw))forceWinningResult(activeDraw);
-  if($('alwaysWin').checked && supportSpin)supportSpin.won=true;
+  if($('alwaysWin').checked && supportSpin && !supportSpin.won){supportSpin.won=true;supportSpin.variant=nextBattleScene();}
   msg($('alwaysWin').checked?'디버그 · 항상 당첨 켜짐':'디버그 종료 · 일반 확률 적용');
 };
 $('sound').onclick=()=>{

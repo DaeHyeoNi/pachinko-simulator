@@ -32,6 +32,9 @@ const SceneAudio=(()=>{
   }
   function weapon(c,kind){
     switch(kind){
+      case 'bell':tone(c,'triangle',784,784,.21,.13);tone(c,'sine',1175,1175,.24,.065,.03);break;
+      case 'jump':tone(c,'square',294,880,.135,.052);break;
+      case 'clap':burst(c,1900,1150,.085,.23);tone(c,'sine',200,105,.105,.16);break;
       case 'blade':burst(c,800,5700,.17,.25);tone(c,'triangle',1450,470,.20,.10,.06);break;
       case 'beam':tone(c,'sawtooth',740,68,.34,.10);burst(c,2500,620,.29,.12);break;
       case 'rocket':burst(c,650,2700,.27,.24);tone(c,'triangle',105,370,.24,.11);break;
@@ -46,7 +49,12 @@ const SceneAudio=(()=>{
     [[.09,'rocket'],[1.03,'rocket'],[1.97,'rocket'],[3.35,'rocket'],[4.38,'beam'],[5.18,'cannon']],
     [[1.20,'beam'],[2.00,'beam'],[3.03,'rocket'],[4.77,'blade']],
     [[.80,'arc'],[1.68,'arc'],[2.35,'arc'],[4.66,'arc']],
-    [[1.10,'cannon'],[3.36,'rocket'],[4.37,'cannon'],[4.90,'beam']]
+    [[1.10,'cannon'],[3.36,'rocket'],[4.37,'cannon'],[4.90,'beam']],
+    [[1.40,'beam'],[3.05,'bell'],[5.15,'beam']],
+    [[.65,'rocket'],[1.53,'rocket'],[2.41,'rocket'],[3.29,'rocket'],[4.8,'rocket']],
+    [[.55,'jump'],[1.55,'bell'],[2.02,'jump'],[3.05,'bell'],[4.64,'jump']],
+    Array.from({length:12},(_,i)=>[.48*(i+1),i%4===3?'bell':'clap']),
+    [[1.05,'blade'],[2.16,'blade'],[3.22,'blade'],[4.28,'blade']]
   ];
   function battle(c,variant,previous,now){
     if(c?.state!=='running')return;
@@ -90,7 +98,7 @@ const SceneAudio=(()=>{
     if(ticket.stage==='battle' && t>=timing.leftStop)
       battle(c,ticket.variant,battleCameraTime(ticket,previous),battleCameraTime(ticket,t));
     if(crosses(finish) && ticket.stage==='battle'){
-      tone(c,'sine',142,41,.39,.28);burst(c,3100,260,.30,.23);
+      impact(c);
       if(ticket.won)[523,659,784,1047].forEach((hz,i)=>tone(c,'triangle',hz,hz,.39,.16,.08+i*.095));
     }
   }
@@ -98,5 +106,9 @@ const SceneAudio=(()=>{
     if(c?.state!=='running')return;
     tone(c,'sine',210,95,.10,.21);tone(c,'triangle',480,1050,.29,.18,.04);
   }
-  return {reels,battle,push};
+  function impact(c){
+    if(c?.state!=='running')return;
+    tone(c,'sine',142,41,.39,.28);burst(c,3100,260,.30,.23);
+  }
+  return {reels,battle,push,impact};
 })();

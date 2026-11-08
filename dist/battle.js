@@ -449,7 +449,150 @@ const drawBattle = (() => {
     if(t>5.10){let f=Math.sin(clamp((t-5.10)/1.34)*Math.PI);
       blast(c,won?x-24:ax,won?y-24:ay-35,t,f*1.42,'#ffab56');}
   }
-  const episodes=[orbitSequence,aerialSequence,empSequence,siegeSequence];
+  const stagePlates=['shrine','trench','foundry','aurora','canyon'].map(name=>{
+    const image=new Image();image.src=name+'.webp';return image;
+  });
+  function stagePlate(c,index,t){
+    const plate=stagePlates[index],pan=6*Math.sin(t*.72);
+    if(plate.naturalWidth)c.drawImage(plate,-17+pan,-15,634,634);
+    else landscape(c,t,false);
+  }
+  function impactAt(c,t,won,hx,hy,ex,ey,ink){
+    const intensity=Math.max(0,1-Math.abs(t-5.83)/.40);
+    blast(c,won?ex:hx,won?ey:hy,t,intensity,ink);
+  }
+  // A shield rotates to catch the beam and send it back through a shrine prism.
+  function mirrorShrine(c,t,won){
+    stagePlate(c,0,t);
+    const hx=170,ex=452,hy=353,ey=326,px=306,py=185+7*Math.sin(t*2);
+    machine(c,ex,ey,1.03,-1,crimson,brace,true,'cannon');
+    machine(c,hx,hy,1.13,1,ivory,{...brace,arm:-1.1-ease((t-2)/.6)*.45},false,'blade');
+    c.save();c.translate(px,py);c.scale(.4+.6*Math.abs(Math.cos(t*1.3)),1);
+    part(c,'M0 -36L21 0L0 34L-21 0Z','#78e4c9','#f6ffe7',3);
+    part(c,'M0 -30L0 24L-14 1Z','#2b928d');c.restore();
+    const tilt=ease((t-2.7)/.7)*(won?-.57:.42);
+    c.save();c.translate(hx+48,hy-48);c.rotate(tilt);
+    part(c,'M-22 -37Q0 -51 21 -36L24 7L0 40L-24 10Z','#f6dda3','#332b26',3);
+    part(c,'M-15 -29L15 -29L16 8L0 28L-16 8Z','#76c9dc','#fff6ce',2);c.restore();
+    if(t>1.4)beam(c,ex-44,ey-48,hx+49,hy-52,'#ff976e',.58);
+    if(t>3.05)beam(c,hx+49,hy-52,px,py,'#a6fff0',ease((t-3.05)/.45)*.76);
+    if(t>5.15)beam(c,px,py,won?ex:hx,won?ey-40:hy-43,'#fffac0',ease((t-5.15)/.62));
+    impactAt(c,t,won,hx,hy-43,ex,ey-40,'#fff4a1');
+  }
+  // The lead mech banks between two torpedo waves and fires at their carrier.
+  function depthFormation(c,t,won){
+    stagePlate(c,1,t);
+    const hx=166+Math.sin(t*1.25)*39,hy=313+Math.sin(t*2.25)*46;
+    const ex=438+12*Math.cos(t),ey=216+10*Math.sin(t*1.5);
+    for(let i=0;i<22;i++){
+      const x=(i*71+Math.sin(t+i)*7)%600,y=510-(i*41+t*(26+i%4*9))%495;
+      ring(c,x,y,2+i%4,'#c1ffff85',1.1);
+    }
+    for(let i=0;i<6;i++){
+      const x=ex-50+(i%3)*46,y=ey-65+Math.floor(i/3)*32;
+      c.save();c.translate(x,y);part(c,'M-14 0L-5 -6L9 -5L16 0L8 6L-5 5Z','#596784','#c1d9d8',1.2);
+      circle(c,-5,0,2.4,'#ff8c91');c.restore();
+    }
+    for(let i=0;i<4;i++){
+      const u=(t-(.65+i*.88))/1.7;
+      if(u>0&&u<1)rocket(c,ex-22-u*427,ey+i*21+u*90,2.94,.55,t+i);
+    }
+    flyingUnit(c,ex,ey,.88,-1,true,-.16,t);
+    flyingUnit(c,hx,hy,1.03,1,false,Math.sin(t*2)*.2,t);
+    if(t>4.8){const u=ease((t-4.8)/1.03),x=hx+(ex-hx)*u,y=hy-46+(ey-hy)*u;
+      if(won)rocket(c,x,y,-.27,.82,t);else rocket(c,ex+(hx-ex)*u,ey-46+(hy-ey)*u,2.8,.82,t);}
+    impactAt(c,t,won,hx,hy-46,ex,ey-46,'#89f7ff');
+  }
+  // Three timed jumps across molten gaps; the last jump lands on the rival.
+  function foundryJump(c,t,won){
+    stagePlate(c,2,t);
+    const xs=[72,211,347,477],ys=[434,393,355,390];
+    for(let i=0;i<4;i++){
+      const x=xs[i],y=ys[i];c.save();c.translate(x,y);
+      if(i<3){
+        const pick=[1.05,2.54,5.23][i],age=t-pick;
+        c.save();c.translate((xs[i+1]-x)*.5,-161);
+        if(age<0){
+          c.scale(.36+.64*Math.abs(Math.cos(t*5+i)),1);
+          part(c,'M0 -13L10 -7L10 7L0 13L-10 7L-10 -7Z','#efb73a','#fff4ae',2.7);
+          segment(c,0,-7,0,7,'#88612f',2);
+        }else if(age<.42){ring(c,0,0,7+age*55,'#fff3a1',2); }
+        c.restore();
+      }
+      part(c,'M-51 0L42 -6L55 3L-39 12Z','#b5b5a0','#f4bd72',2);
+      part(c,'M-39 12L55 3L48 25L-39 33Z','#543c38','#241e22',2);
+      for(let j=0;j<4;j++)segment(c,-33+j*21,18,-25+j*21,11,'#d3a34c',3);
+      c.restore();
+    }
+    const starts=[.55,2.02,4.64],ends=[1.55,3.05,5.83];
+    let hx=xs[0],foot=ys[0],air=0;
+    for(let i=0;i<3;i++){
+      if(t<starts[i])break;
+      const u=clamp((t-starts[i])/(ends[i]-starts[i]));
+      const target=i===2&&!won?xs[3]-76:xs[i+1];
+      hx=xs[i]+(target-xs[i])*u;air=4*u*(1-u);
+      foot=ys[i]+(ys[i+1]-ys[i])*u-air*(i===2?130:94);
+    }
+    const ex=xs[3],ey=ys[3]-65,land=ease((t-5.64)/.19);
+    machine(c,ex,ey+(won?12*land:0),.84,-1,crimson,brace,true,'');
+    machine(c,hx,foot-69-(won?42*land:0),.90,1,ivory,{...brace,knee:.45+air,leg:-.4-air*.5,arm:-.6-air},false,'');
+    impactAt(c,t,won,hx,foot-54,ex,ey-18,'#ffe997');
+  }
+  // Alternating two-count poses, then an answering syncopated kick on the ice.
+  function auroraBeat(c,t,won){
+    stagePlate(c,3,t);
+    const beat=Math.floor(t/.48),phase=t/.48-beat;
+    const bop=Math.sin(phase*Math.PI),left=beat%4<2;
+    const kick=ease((t-5.16)/.67);
+    const hx=171+kick*94,ex=433-kick*53;
+    // Beat marks move into the strike circle over the skaters' heads.
+    for(let j=0;j<4;j++){
+      const mx=292+(j-phase)*49,my=158;
+      c.save();c.translate(mx,my);c.rotate(-.15);
+      c.fillStyle=j%2?'#f6c6ff':'#c5ffef';c.beginPath();c.ellipse(0,0,5,3.7,-.3,0,Math.PI*2);c.fill();
+      segment(c,4,0,4,-15,c.fillStyle,2);segment(c,4,-15,10,-12,c.fillStyle,2);c.restore();
+    }
+    ring(c,243,157,12+bop*3,'#fff0b1',2.8);
+    const dance=(active,sign)=>({...brace,lean:sign*bop*(active ? .2 : .055),
+      arm:-.57-(active?1.5:.33)*bop,elbow:-.38-bop*.52,
+      leg:-.32-(active ? .83 : .13)*bop,knee:.26+bop*(active?1.1:.2)});
+    for(const [x,active] of [[hx,left],[ex,!left]]){
+      c.save();c.translate(x,416);c.scale(1,.23);
+      ring(c,0,0,52+phase*28,active?'#abfff2':'#b693ff',active?5:2);c.restore();
+    }
+    machine(c,hx,333-(left?21:5)*bop,.98,1,ivory,dance(left,1),false,'');
+    machine(c,ex,333-(left?5:21)*bop,.98,-1,crimson,dance(!left,-1),true,'');
+    if(t>5.16)slash(c,t,!won,Math.sin(Math.PI*clamp((t-5.16)/1.19)));
+    impactAt(c,t,won,hx,305,ex,304,'#c9fff7');
+  }
+  // Side-scrolling raid: a small attacker dashes through a large armored boss.
+  function canyonCombo(c,t,won){
+    stagePlate(c,4,t);
+    const strikes=[1.05,2.16,3.22,4.28,5.83];
+    let recoil=0;
+    for(const at of strikes)recoil=Math.max(recoil,clamp(1-Math.abs(t-at)/.24));
+    const advance=ease(t/1.05),cross=ease((t-3.0)/.5)*(1-ease((t-4)/.55));
+    const hx=85+advance*197+cross*175,ex=409+(won?recoil*16:0),hy=354-37*Math.abs(Math.sin(t*2.65));
+    machine(c,ex,310,1.41,-1,crimson,{...brace,lean:-.10+recoil*.13},true,'cannon');
+    machine(c,hx,hy,.77,cross>.5?-1:1,ivory,{...flight,arm:-.65-recoil*1.1},false,'blade');
+    for(let i=0;i<18;i++){
+      const x=630-(i*67+t*(40+i%4*16))%680,y=116+(i*39+t*28)%344;
+      c.save();c.translate(x,y);c.rotate(t+i);
+      part(c,'M0 -7L2 -3L5 -4L4 0L8 0L2 5L0 8L-1 4L-6 1L-3 0L-5 -4L-1 -3Z',i%2?'#db6d39':'#f7b35a');c.restore();
+    }
+    if(recoil>.02)slash(c,t,hx>ex,recoil);
+    // Rising hit values belong to the boss sprite, clear of the main reels.
+    strikes.forEach((at,i)=>{
+      const age=t-at;if(age<0||age>.63||(!won&&i===4))return;
+      c.save();c.globalAlpha=1-ease((age-.33)/.30);c.translate(ex-16+(i%2)*22,213-age*62);
+      c.rotate(i%2 ? .09 : -.09);c.font='italic 900 29px Arial';c.textAlign='center';
+      c.strokeStyle='#652f24';c.lineWidth=4;c.strokeText(128+i*147,0,0);
+      c.fillStyle='#ffdf7b';c.fillText(128+i*147,0,0);c.restore();
+    });
+    if(t>5&&!won)beam(c,ex-63,244,hx,hy-30,'#ff8371',ease((t-5)/.83));
+    impactAt(c,t,won,hx,hy-30,ex,268,'#ffd194');
+  }
+  const episodes=[orbitSequence,aerialSequence,empSequence,siegeSequence,mirrorShrine,depthFormation,foundryJump,auroraBeat,canyonCombo];
   return function drawBattle(ctx,elapsed,variant,digits,won) {
     const t=Math.max(0,Number(elapsed)||0); if(t>=6.4)return;
     const cannon=variant===1||/cannon|beam|포격|포탄/i.test(String(variant));
