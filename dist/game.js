@@ -445,6 +445,7 @@ function advanceSupport(){
     }
     supportSpin.lastAge=age;
     if(supportSpin.won && !supportSpin.counted && age>=1.7){
+      if(sound && rush.kind==='st')SceneAudio.stHit(ac);
       rush.renew();wins++;supportSpin.counted=true;status();
     }
     if(age<(supportSpin.won?3:.6))return;
@@ -458,7 +459,11 @@ function advanceSupport(){
     status();
   }
   const next=rush.next();
-  if(next){supportSpin={...next,started:now,lastAge:0,variant:next.won?nextBattleScene():null};status();}
+  if(next){
+    supportSpin={...next,started:now,lastAge:0,variant:next.won?nextBattleScene():null};
+    if(sound && rush.kind==='st')SceneAudio.stSweep(ac,rush.remaining+1);
+    status();
+  }
   else if(!rush.remaining){supportEndedAt=now;status();}
 }
 function openAttackerRound(round){
@@ -482,6 +487,7 @@ function advanceAttacker(){
   }
   mode='support';warningUntil=0;supportStartedAt=now;supportEndedAt=null;supportSpin=null;
   rush.startSupport();
+  if(sound && rush.kind==='st')SceneAudio.stEntry(ac);
   msg((rush.kind==='st'?'RUSH':'찬스타임')+' 돌입 · '+rush.remaining+'회 · 우타를 유지하세요.');status();
 }
 function collectAttacker(){

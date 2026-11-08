@@ -159,6 +159,35 @@ const SceneAudio=(()=>{
       if(eighth===32)[60,64,67].forEach(n=>tone(c,'triangle',midi(n),midi(n),.80,.10));
     }
   }
+  // A rising synth fifth identifies ST. Every cue is attached to a game event.
+  function stEntry(c){
+    if(c?.state!=='running')return;
+    burst(c,380,3200,.32,.10);
+    [62,69,74,78].forEach((note,i)=>{
+      const hz=midi(note),delay=[0,.105,.21,.40][i];
+      tone(c,'triangle',hz*.96,hz,i===3 ? .38 : .18,.18,delay);
+      tone(c,'sine',hz*1.5,hz*1.5,.17,.065,delay+.012);
+    });
+  }
+  function stSweep(c,spinsLeft){
+    if(c?.state!=='running')return;
+    const lastFive=spinsLeft<=5;
+    const hz=midi(lastFive?76+(5-spinsLeft):74);
+    tone(c,'sine',hz*.70,hz,.095,.14);
+    tone(c,'triangle',hz*1.5,hz*1.5,.12,.085,.07);
+    if(lastFive){
+      tone(c,'sine',hz,hz,.085,.12,.22);
+      tone(c,'triangle',hz*1.5,hz*1.5,.12,.09,.28);
+    }
+  }
+  function stHit(c){
+    if(c?.state!=='running')return;
+    for(const [delay,note] of [[0,74],[.066,81],[.135,86]]){
+      const hz=midi(note);
+      tone(c,'triangle',hz*.97,hz,.22,.125,delay);
+      tone(c,'sine',hz*1.5,hz*1.5,.14,.065,delay);
+    }
+  }
   function payoutChime(c){
     if(c?.state!=='running')return;
     // Two short bell arpeggios resolve before the next ball at normal cadence.
@@ -178,5 +207,5 @@ const SceneAudio=(()=>{
     if(c?.state!=='running')return;
     tone(c,'sine',142,41,.39,.28);burst(c,3100,260,.30,.23);
   }
-  return {reels,battle,push,impact,award,payoutChime};
+  return {reels,battle,push,impact,award,payoutChime,stEntry,stSweep,stHit};
 })();
