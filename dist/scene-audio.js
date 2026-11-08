@@ -77,6 +77,16 @@ const SceneAudio=(()=>{
       tone(c,'triangle',pitch*.985,pitch,.18,.18);
       tone(c,'sine',pitch*2,pitch*2,.23,.09,.028);
     }
+    if(ticket.digits[0]===ticket.digits[2]){
+      if(crosses(timing.rightStop)){
+        const cue=['beam','blade','arc'][ticket.reachVariant];
+        if(cue)weapon(c,cue);
+      }
+      if(crosses(timing.rightStop+1.05) && t<finish){
+        tone(c,'triangle',660,990,.2,.13);
+        if(ticket.reachVariant===1)burst(c,3400,400,.25,.20);
+      }
+    }
     if(ticket.stage==='battle' && t>=timing.leftStop)
       battle(c,ticket.variant,battleCameraTime(ticket,previous),battleCameraTime(ticket,t));
     if(crosses(finish) && ticket.stage==='battle'){

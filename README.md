@@ -1,4 +1,4 @@
-# GINKYO · 파칭코 시뮬레이터
+# 파칭코 시뮬레이터
 
 [브라우저에서 플레이](https://ginkyo-pachinko-hall-k7.rlawotns1597.chatgpt.site)
 

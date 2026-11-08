@@ -59,15 +59,15 @@ class BanknoteAcceptor {
     }
     c.restore();
     const text=(v,x,y,font,color,align='left')=>{c.fillStyle=color;c.font=font;c.textAlign=align;c.fillText(v,x,y)};
-    text('銀京遊技券',287,59,'bold 30px serif','#365951','center');
-    text('G I N K Y O   A R C A D E',288,78,'12px Georgia','#426a65','center');
+    text('遊技引換券',287,59,'bold 30px serif','#365951','center');
+    text('파칭코 시뮬레이터',288,78,'12px Georgia','#426a65','center');
     text('千円',111,151,'bold 33px serif','#345951','center');
     text('1000',466,159,'bold italic 47px Georgia','#415d58','center');
     text('1000',33,54,'bold 33px Georgia','#3a675d');
     text('壱千円',547,239,'bold 22px serif','#465e53','right');
     text('GK  716250  A',32,241,'14px monospace','#573f38');
     c.strokeStyle='#8d4536';c.lineWidth=1.5;c.strokeRect(392,188,33,33);
-    text('銀京',408,210,'bold 12px serif','#8d4536','center');
+    text('遊技',408,210,'bold 12px serif','#8d4536','center');
     return flat;
   }
 

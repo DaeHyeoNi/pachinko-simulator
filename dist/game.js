@@ -22,7 +22,7 @@ field.perimeter.forEach(([x,y],i)=>i?freeFieldMask.lineTo(x,y):freeFieldMask.mov
 const nailPhoto=typeof Image==='undefined'?null:new Image();
 if(nailPhoto){
   nailPhoto.onload=()=>prepareAcrylicLamps($('guideGlow'),nailPhoto);
-  nailPhoto.src='cabinet-photo.webp';
+  nailPhoto.src='cabinet-photo.webp?v=22';
 }
 const titleRecess=typeof Image==='undefined'?null:new Image();
 if(titleRecess)titleRecess.src='title-recess.webp';
@@ -72,7 +72,7 @@ function drawDisplay() {
     } else drawBonusRound(g,now-bonusStartedAt,attacker.round,attacker.hits,rightHits*15,finished,bonusRounds);
   }
   else if(mode==='support') renderSupport(g);
-  else if(!hits){
+  else if(mode==='empty'||mode==='normal'){
     idleTicket.elapsed=5+now;
     drawReelReveal(g,idleTicket,true);
   } else g.drawImage(standby,0,0);
@@ -355,7 +355,7 @@ function drawTicket(){
   const lucky=rand() < (won ? 0.8 : 0.06);
   const matchingSides = first===third;
   const stage = won || lucky || (matchingSides && rand()<.38) ? 'battle' : matchingSides ? 'reach' : 'short';
-  return {won,lucky,digits:lucky?[7,won?7:6,7]:[first,second,third],stage,
+  return {won,lucky,reachVariant:Math.floor(rand()*3),digits:lucky?[7,won?7:6,7]:[first,second,third],stage,
     variant:stage==='battle'?nextBattleScene():null,patrolOffset:rand()*18,elapsed:0,pushTime:null};
 }
 function forceWinningResult(ticket){
@@ -369,7 +369,7 @@ function startNext(){
   activeDraw=waiting.shift();
   normalSpins++;
   if($('alwaysWin').checked)forceWinningResult(activeDraw);
-  msg('헤소 추첨 · 도형 변동');
+  msg('헤소 입상 · 추첨 시작');
 }
 function score(){
   hits++;payout++;
@@ -395,6 +395,7 @@ function advanceBattle(dt){
   }
   if(activeDraw.elapsed<finish+(activeDraw.won?9:drawTiming(activeDraw).hold))return;
   const result=activeDraw;
+  idleTicket.digits=[...result.digits];
   activeDraw=null;
   drawReelReveal(standby.getContext('2d'),result,true);
   if(result.won){

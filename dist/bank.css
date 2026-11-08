@@ -23,7 +23,7 @@
 /* The photograph is the physical cabinet. Controls sit on its actual apertures. */
 main{--reader:clamp(34px,8%,50px);width:min(100%,max(365px,51svh),770px);padding:3px 2px}
 .machine-body{grid-template-columns:var(--reader) minmax(0,1fr);gap:0}
-.cabinet{aspect-ratio:941/1672;padding:0;border:0;border-radius:2% 2% 4% 4%;background:#090708 url(cabinet-photo.webp) center/100% 100% no-repeat;box-shadow:0 5px 20px #000}
+.cabinet{aspect-ratio:941/1672;padding:0;border:0;border-radius:2% 2% 4% 4%;background:#090708 url(cabinet-photo.webp?v=22) center/100% 100% no-repeat;box-shadow:0 5px 20px #000}
 .cabinet>.acrylic-rim,.cabinet>.screw,.inner>.lens-fin,.field::after{display:none}
 .inner,.field{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;background:transparent;border:0;border-radius:0;box-shadow:none}
 .inner{height:75.36%;overflow:hidden}
@@ -41,8 +41,8 @@ main{--reader:clamp(34px,8%,50px);width:min(100%,max(365px,51svh),770px);padding
 .balance strong{font-size:clamp(13px,2.7vh,24px)}.balance>span{font-size:clamp(7px,1.1vh,9px)}.balance small{display:none}
 #chancePush,.cabinet[data-chance="ready"] #chancePush{position:absolute;left:36.8%;top:13.8%;width:27.6%;height:48%;min-height:0;padding:0;color:transparent;background:none;border:0;box-shadow:none;border-radius:50%;overflow:hidden}
 #chancePush::before,.cabinet[data-chance="ready"] #chancePush::before{inset:0;background:none;border:0;box-shadow:none}
-#chancePush span{position:absolute;inset:0;color:transparent;text-shadow:none;box-shadow:none;background:url(cabinet-photo.webp) 50.83% 87.41%/362.32% 730.99% no-repeat;padding:0;border-radius:50%}
-.cabinet[data-chance="ready"] #chancePush span{color:transparent;background-color:transparent;background-image:url(cabinet-photo.webp);box-shadow:inset 0 0 14px 5px #ffde78}
+#chancePush span{position:absolute;inset:0;color:transparent;text-shadow:none;box-shadow:none;background:url(cabinet-photo.webp?v=22) 50.83% 87.41%/362.32% 730.99% no-repeat;padding:0;border-radius:50%}
+.cabinet[data-chance="ready"] #chancePush span{color:transparent;background-color:transparent;background-image:url(cabinet-photo.webp?v=22);box-shadow:inset 0 0 14px 5px #ffde78}
 .lower-deck #handle{position:absolute;right:3%;bottom:4%;width:23%;min-height:0;padding:2%;border:0;border-radius:38% 38% 22% 22%;background:linear-gradient(115deg,#100c09,#3b352e 45%,#151313 76%,#82776a);box-shadow:1px 5px 7px #0009}
 .rh-top strong,.rh-marks,.rh-hint{display:none}.rh-top{justify-content:center}.rh-lock-row{justify-content:center;gap:2px}.rh-lock-row span{font-size:8px}.rh-instrument{margin:0}.rh-readout b{font-size:11px}
 .data-meter{width:100%;margin:0;min-height:52px;position:relative;gap:4%;justify-content:center;padding:7px 5px 6px;border:3px ridge #9f9d9a;border-bottom:4px solid #211b1c;border-radius:9px 9px 2px 2px;background:linear-gradient(160deg,#71627f40,transparent 40%),repeating-linear-gradient(0deg,#171622 0 1px,#101119 1px 4px)}

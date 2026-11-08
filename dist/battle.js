@@ -449,27 +449,14 @@ const drawBattle = (() => {
     if(t>5.10){let f=Math.sin(clamp((t-5.10)/1.34)*Math.PI);
       blast(c,won?x-24:ax,won?y-24:ay-35,t,f*1.42,'#ffab56');}
   }
-  const episodes=[
-    [orbitSequence,'궤도 요격전','#a0e7ff'],
-    [aerialSequence,'구름 위의 추격','#fff1c5'],
-    [empSequence,'도시 정전','#82ffcf'],
-    [siegeSequence,'장갑열차 공성전','#ffb786']
-  ];
+  const episodes=[orbitSequence,aerialSequence,empSequence,siegeSequence];
   return function drawBattle(ctx,elapsed,variant,digits,won) {
     const t=Math.max(0,Number(elapsed)||0); if(t>=6.4)return;
     const cannon=variant===1||/cannon|beam|포격|포탄/i.test(String(variant));
     const c=ctx;c.save();c.lineJoin='round';c.lineCap='round';c.beginPath();c.rect(0,0,600,600);c.clip();
     const episode=episodes[Number(variant)-2];
     if(episode){
-      episode[0](c,Math.min(t,6.399),won);
-      if(t<2.15){
-        c.save();c.globalAlpha=1-ease((t-1.65)/.5);
-        const width=episode[1].length*19+25;
-        c.fillStyle='#101a26d9';c.fillRect(49,167,width,31);
-        c.fillStyle=episode[2];c.fillRect(49,167,3,31);
-        text(c,episode[1],60,183,18,'#fff4db');c.restore();
-      }
-
+      episode(c,Math.min(t,6.399),won);
       c.restore();return;
     }
     landscape(c,t,cannon);
@@ -504,12 +491,6 @@ const drawBattle = (() => {
       if(flash>.01){c.fillStyle='rgba(255,240,205,'+flash+')';c.fillRect(0,0,600,600);}
     }
     if(t>=5.62&&t<6.4)thrust(c,t,won);
-    c.fillStyle='#0c111ce0';c.fillRect(0,0,600,57);c.fillRect(0,543,600,57);
-    segment(c,0,57,600,57,'#aa856680');segment(c,0,543,600,543,'#aa856680');
-    text(c,cannon?'ENERGY CANNON':'BLADE DUEL',34,32,13,'#dec7a6');
-    text(c,'GINKYO  /  COMBAT',565,32,11,'#d8c4a7','right');
-    if(t<6.4){text(c,t<1.66?'대치':t<4.3?'교전':t<5.45?'최후의 일격':'결착',300,569,18,'#f6dfba','center');}
-
     c.restore();
   };
 })();

@@ -119,20 +119,16 @@ function drawReelReveal(c,ticket,retained=false) {
     drawBattle(c,battleCameraTime(ticket),ticket.variant,ticket.digits,ticket.won);
     const flash=1-reelEase((t-timing.leftStop)/.36);
     if(flash>0){c.fillStyle='rgba(218,242,255,'+flash*.72+')';c.fillRect(0,0,600,600);}
-  } else if(patrolPlate.naturalWidth){
-    const age=t+(ticket.patrolOffset||0);
-    c.drawImage(patrolPlate,-18+8*Math.sin(age*.67),-18+8*Math.cos(age*.48),636,636);
   } else {
-    drawPatrol(c,t,ticket.patrolOffset);
+    drawNormalScene(c,t,ticket.patrolOffset||0);
   }
+  if(isReachLive(ticket))drawReachScene(c,ticket.reachVariant,t-timing.rightStop,finish-t);
   if(!inBattle){
-    const reach = isReachLive(ticket);
     const travel=timing===normalReachTiming ? reelEase((t-timing.rightStop)/.6)*(1-reelEase((t-finish+.8)/.8)) : 0;
     for(let i=0;i<3;i++){
       const distance=134+travel*40, y=360+(i-1)*29-travel*(i===1?55:8)+Math.sin(t*1.6+i)*9;
       drawSpinningSymbol(c,ticket,i,300+(i-1)*distance,y,i===1 ? 144+travel*18 : i===0?119:134,finish);
     }
-    if(reach)symbolRibbon(c,'리치',145,30,'#ffdf9e',1-reelEase((t-timing.rightStop-1.3)/.7));
     c.restore();return;
   }
   // Side symbols travel away from the pilots during the fight, then meet the
@@ -147,9 +143,7 @@ function drawReelReveal(c,ticket,retained=false) {
   drawSpinningSymbol(c,ticket,2,300+sideDistance,sideY+14*(1-converge),sideSize*1.08,finish);
   drawSpinningSymbol(c,ticket,1,300,centerY,centerSize,finish);
   if (isReachLive(ticket)) {
-    const age=t-reelTiming.rightStop;
     if(ticket.lucky) {
-      symbolRibbon(c,'LUCKY CHANCE',147,26,'#ffe6a0');
       if(chanceIsReady(ticket)){
         symbolRibbon(c,'중앙 PUSH를 누르세요',475,23,'#fff3d4');
         const left=(reelTiming.pushDeadline-t)/(reelTiming.pushDeadline-reelTiming.rightStop);
@@ -158,8 +152,6 @@ function drawReelReveal(c,ticket,retained=false) {
       } else if(ticket.pushTime!=null && t-ticket.pushTime<.62) {
         symbolRibbon(c,'PUSH!',475,27,'#fff1bd',1-reelEase((t-ticket.pushTime-.28)/.34));
       }
-    } else if(age<2.0) {
-      symbolRibbon(c,'리치',150,36,'#ffdc91',1-reelEase((age-1.35)/.65));
     }
   }
   if(t>=finish && !retained && ticket.won){
