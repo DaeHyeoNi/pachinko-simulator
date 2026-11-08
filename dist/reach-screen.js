@@ -1,18 +1,15 @@
 'use strict';
 const quietScenes=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
-function drawNormalScene(c,time){
-  // Use the cabinet clock so reserve starts cannot restart the close-up.
-  const phase=time%48,location=Math.floor(phase/8),local=phase%8;
-  const still=quietScenes?.matches;
-  const camera=still?location*8+2:time;
-  drawAmbientPatrol(c,location,camera);
-  if(local>7.4 && !still){
-    c.save();c.globalAlpha=reelEase((local-7.4)/.6);
-    drawAmbientPatrol(c,(location+1)%6,camera);c.restore();
+function drawNormalScene(c,ticket,sceneTime,rolling){
+  const location=ticket.location??0;
+  if(!rolling){
+    drawAmbientPatrol(c,location,quietScenes?.matches?2:sceneTime*.48);
+    return;
   }
-  if(phase<45 || phase>=47 || !patrolPlate.naturalWidth)return;
-  c.save();
-  c.globalAlpha=reelEase((phase-45)/.35)*(1-reelEase((phase-46.55)/.45));
+  drawSpinAction(c,location,quietScenes?.matches?1.15:ticket.elapsed);
+  const phase=sceneTime%48;
+  if(location!==0||phase<45||phase>=47||!patrolPlate.naturalWidth)return;
+  c.save();c.globalAlpha=reelEase((phase-45)/.35)*(1-reelEase((phase-46.55)/.45));
   c.drawImage(patrolPlate,-11,-11,622,622);c.restore();
 }
 function drawTargetLock(c,t){

@@ -32,7 +32,7 @@ const standby=document.createElement('canvas');
 let bonusStartedAt=0, roundStartedAt=0, normalSpins=0;
 const firstHitHistory=[];
 standby.width=standby.height=600;
-const idleTicket={stage:'short',digits:[4,5,1],elapsed:5};
+const idleTicket={stage:'short',digits:[4,5,1],elapsed:5,location:0};
 drawReelReveal(standby.getContext('2d'),idleTicket,true);
 // One outline drives both collisions and the molded display surround.
 const displayOutline=makeDisplayOutline();
@@ -369,6 +369,8 @@ function startNext(){
   activeDraw=waiting.shift();
   normalSpins++;
   if($('alwaysWin').checked)forceWinningResult(activeDraw);
+  activeDraw.location=activeDraw.variant>=6 ? activeDraw.variant-5 :
+    (idleTicket.location+1+Math.floor(rand()*5))%6;
   msg('헤소 입상 · 추첨 시작');
 }
 function score(){
@@ -396,6 +398,7 @@ function advanceBattle(dt){
   if(activeDraw.elapsed<finish+(activeDraw.won?9:drawTiming(activeDraw).hold))return;
   const result=activeDraw;
   idleTicket.digits=[...result.digits];
+  idleTicket.location=result.location;
   activeDraw=null;
   drawReelReveal(standby.getContext('2d'),result,true,now);
   if(result.won){

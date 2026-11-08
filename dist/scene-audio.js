@@ -97,6 +97,10 @@ const SceneAudio=(()=>{
     }
     if(ticket.stage==='battle' && t>=timing.leftStop)
       battle(c,ticket.variant,battleCameraTime(ticket,previous),battleCameraTime(ticket,t));
+    else if(ticket.location>0 && t<finish){
+      const camera=t%4.8,prior=previous%4.8;
+      battle(c,ticket.location+5,prior>camera?0:prior,camera);
+    }
     if(crosses(finish) && ticket.stage==='battle'){
       impact(c);
       if(ticket.won)[523,659,784,1047].forEach((hz,i)=>tone(c,'triangle',hz,hz,.39,.16,.08+i*.095));

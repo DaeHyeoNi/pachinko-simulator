@@ -61,7 +61,7 @@ const drawBattle = (() => {
     }
     c.restore();
   }
-  function arm(c,p,x,y,angle,elbow,weapon) {
+  function arm(c,p,x,y,angle,elbow,weapon,handMount) {
     c.save();c.translate(x,y);c.rotate(angle);joint(c,0,0,12,p);
     part(c,'M-10 4L8 2L13 13L7 30L0 35L-11 25L-14 15Z',p.mid,p.ink,1.8);
     part(c,'M-8 5L5 5L9 13L3 24L-4 25L-10 14Z',p.shell);
@@ -74,6 +74,7 @@ const drawBattle = (() => {
     part(c,'M-7 35L7 32L10 40L5 47L-6 46L-9 40Z',p.ink,p.seam,2);
     for(let i=0;i<3;i++)segment(c,-4+i*3,38,-3+i*3,44,p.mid,1.4);
     c.translate(0,38);
+    if(handMount)handMount(c);
     if(weapon==='blade'){
       part(c,'M-8 -7L-3 -8L3 0L9 -2L11 2L3 6L4 13L0 14L-4 6L-11 8L-13 4L-6 1Z',p.trim,p.ink,1.5);
       c.shadowColor=p.core;c.shadowBlur=9;
@@ -114,8 +115,8 @@ const drawBattle = (() => {
       segment(c,-57,-61,-38,-64,p.trim,4);circle(c,-48,-34,7,p.ink);circle(c,-48,-34,4,p.eye);
     }
     arm(c,p,-24,-52,pose.back||.1,.35,'');
-    leg(c,p,-11,12,pose.farLeg||.26,-.14,enemy);
-    leg(c,p,12,16,pose.leg||-.20,pose.knee||.20,enemy);
+    leg(c,p,-11,12,pose.farLeg??.26,pose.farKnee??-.14,enemy);
+    leg(c,p,12,16,pose.leg??-.20,pose.knee??.20,enemy);
     part(c,'M-26 -59L-12 -70L6 -66L18 -72L32 -55L24 -26L13 -12L14 2L-2 11L-19 1L-28 -27Z',p.dark,p.ink,2);
     part(c,'M-25 -60L-10 -65L0 -59L13 -65L23 -60L28 -52L15 -36L-2 -28L-19 -37L-30 -50Z',p.shell,p.ink,1.7);
     part(c,'M-25 -58L-11 -64L1 -58L15 -64L21 -59L15 -60L0 -54L-12 -59Z',p.light);
@@ -133,7 +134,7 @@ const drawBattle = (() => {
     part(c,'M-10 -17L6 -25L20 -19L28 -8L10 -14L-1 -10Z',p.light);
     part(c,'M8 -11L27 -4L24 4L11 6L2 1Z',p.mid);
     segment(c,13,0,23,-1,p.trim,2);c.restore();
-    arm(c,p,23,-41,pose.arm,pose.elbow,weapon);
+    arm(c,p,23,-41,pose.arm,pose.elbow,weapon,pose.handMount);
     if(p.kit==='grove'){
       part(c,'M-24 -62L-1 -52L24 -61L12 -39L-4 -46L-36 -17L-28 -43L-44 -41Z','#34754f',p.ink,2);
       circle(c,-2,-51,4,p.trim);
@@ -502,24 +503,33 @@ const drawBattle = (() => {
   function mirrorShrine(c,t,won){
     stagePlate(c,0,t);
     const hx=170,ex=452,hy=353,ey=326,px=306,py=185+7*Math.sin(t*2);
-    machine(c,ex,ey,1.03,-1,crimson,brace,true,'cannon');
-    machine(c,hx,hy,1.13,1,prismArmor,{...brace,arm:-1.1-ease((t-2)/.6)*.45},false,'blade');
+    const guard=ease((t-.35)/.95),turn=ease((t-2.5)/.55),stagger=won?0:ease((t-5.45)/.4);
+    const base=c.getTransform().inverse();
+    let shield;
+    function holdShield(hand){
+      const wrist=base.multiply(hand.getTransform());shield={x:wrist.e,y:wrist.f};
+      hand.save();hand.rotate(1.6-turn*.65);
+      part(hand,'M-22 -37Q0 -51 21 -36L24 7L0 40L-24 10Z','#f6dda3','#332b26',3);
+      part(hand,'M-15 -29L15 -29L16 8L0 28L-16 8Z','#76c9dc','#fff6ce',2);hand.restore();
+    }
+    machine(c,ex,ey,1.03,-1,crimson,{...brace,arm:-.65-.48*guard},true,'cannon');
+    machine(c,hx-20*stagger,hy+8*guard,1.13,1,prismArmor,
+      {...brace,arm:-.22-1.12*guard,elbow:-.38-.68*guard-.45*turn,lean:guard*.15-stagger*.35,
+        leg:-.36-.32*guard,knee:.38+.37*guard,handMount:holdShield},false,'');
     c.save();c.translate(px,py);c.scale(.4+.6*Math.abs(Math.cos(t*1.3)),1);
     part(c,'M0 -36L21 0L0 34L-21 0Z','#78e4c9','#f6ffe7',3);
     part(c,'M0 -30L0 24L-14 1Z','#2b928d');c.restore();
-    const tilt=ease((t-2.7)/.7)*(won?-.57:.42);
-    c.save();c.translate(hx+48,hy-48);c.rotate(tilt);
-    part(c,'M-22 -37Q0 -51 21 -36L24 7L0 40L-24 10Z','#f6dda3','#332b26',3);
-    part(c,'M-15 -29L15 -29L16 8L0 28L-16 8Z','#76c9dc','#fff6ce',2);c.restore();
-    if(t>1.4)beam(c,ex-44,ey-48,hx+49,hy-52,'#ff976e',.58);
-    if(t>3.05)beam(c,hx+49,hy-52,px,py,'#a6fff0',ease((t-3.05)/.45)*.76);
+    if(t>1.4)beam(c,ex-44,ey-48,shield.x,shield.y,'#ff976e',.58);
+    if(t>3.05)beam(c,shield.x,shield.y,px,py,'#a6fff0',ease((t-3.05)/.45)*.76);
     if(t>5.15)beam(c,px,py,won?ex:hx,won?ey-40:hy-43,'#fffac0',ease((t-5.15)/.62));
     impactAt(c,t,won,hx,hy-43,ex,ey-40,'#fff4a1');
   }
   // The lead mech banks between two torpedo waves and fires at their carrier.
   function depthFormation(c,t,won){
     stagePlate(c,1,t);
-    const hx=166+Math.sin(t*1.25)*39,hy=313+Math.sin(t*2.25)*46;
+    const dodge=Math.sin(Math.PI*clamp((t-1.00)/.80))-Math.sin(Math.PI*clamp((t-2.72)/.82));
+    const aim=ease((t-4.02)/.67),recoil=Math.sin(Math.PI*clamp((t-4.8)/.40));
+    const hx=166+37*Math.sin(t*1.25)-recoil*22,hy=289+68*dodge;
     const ex=438+12*Math.cos(t),ey=216+10*Math.sin(t*1.5);
     for(let i=0;i<22;i++){
       const x=(i*71+Math.sin(t+i)*7)%600,y=510-(i*41+t*(26+i%4*9))%495;
@@ -535,7 +545,12 @@ const drawBattle = (() => {
       if(u>0&&u<1)rocket(c,ex-22-u*427,ey+i*21+u*90,2.94,.55,t+i);
     }
     flyingUnit(c,ex,ey,.88,-1,true,-.16,t);
-    flyingUnit(c,hx,hy,1.03,1,false,Math.sin(t*2)*.2,t,diveArmor);
+    const bank=dodge*.64-aim*.19;
+    c.save();c.translate(hx,hy);c.rotate(bank);
+    beam(c,-35,-32,-81-32*Math.abs(dodge),-28,'#81fff0',.49+Math.abs(dodge)*.5);
+    machine(c,0,0,1.03,1,diveArmor,{...flight,lean:.39-.37*aim,arm:-.5-aim*.94,
+      elbow:-.88+.58*aim,back:.35+dodge*.55,leg:.29+dodge*.7,knee:.7+Math.abs(dodge)*.6},false,'cannon');
+    c.restore();
     if(t>4.8){const u=ease((t-4.8)/1.03),x=hx+(ex-hx)*u,y=hy-46+(ey-hy)*u;
       if(won)rocket(c,x,y,-.27,.82,t);else rocket(c,ex+(hx-ex)*u,ey-46+(hy-ey)*u,2.8,.82,t);}
     impactAt(c,t,won,hx,hy-46,ex,ey-46,'#89f7ff');
@@ -571,8 +586,11 @@ const drawBattle = (() => {
       foot=ys[i]+(ys[i+1]-ys[i])*u-air*(i===2?130:94);
     }
     const ex=xs[3],ey=ys[3]-65,land=ease((t-5.64)/.19);
+    let crouch=0;
+    for(const start of starts)crouch+=Math.sin(Math.PI*clamp((t-start+.28)/.28));
+    for(const end of ends)crouch+=.65*Math.sin(Math.PI*clamp((t-end)/.28));
     machine(c,ex,ey+(won?12*land:0),.84,-1,crimson,brace,true,'');
-    machine(c,hx,foot-69-(won?42*land:0),.90,1,jumpArmor,{...brace,knee:.45+air,leg:-.4-air*.5,arm:-.6-air},false,'');
+    machine(c,hx,foot-94+22*crouch-(won?68*land:0),.90,1,jumpArmor,{...brace,knee:.28+air*1.58+crouch,leg:-.25-air*1.10-.65*crouch,farLeg:.22+.68*air,farKnee:.60*air,arm:-.4-air*2.05,back:.25+.8*air},false,'');
     impactAt(c,t,won,hx,foot-54,ex,ey-18,'#ffe997');
   }
   // Alternating two-count poses, then an answering syncopated kick on the ice.
@@ -581,7 +599,7 @@ const drawBattle = (() => {
     const beat=Math.floor(t/.48),phase=t/.48-beat;
     const bop=Math.sin(phase*Math.PI),left=beat%4<2;
     const kick=ease((t-5.16)/.67);
-    const hx=171+kick*94,ex=433-kick*53;
+    const hx=171+kick*100,ex=433-kick*62;
     // Beat marks move into the strike circle over the skaters' heads.
     for(let j=0;j<4;j++){
       const mx=292+(j-phase)*49,my=158;
@@ -597,8 +615,12 @@ const drawBattle = (() => {
       c.save();c.translate(x,416);c.scale(1,.23);
       ring(c,0,0,52+phase*28,active?'#abfff2':'#b693ff',active?5:2);c.restore();
     }
-    machine(c,hx,333-(left?21:5)*bop,.98,1,beatArmor,dance(left,1),false,'');
-    machine(c,ex,333-(left?5:21)*bop,.98,-1,crimson,dance(!left,-1),true,'');
+    const hero=dance(left,1),rival=dance(!left,-1);
+    const kicker=won?hero:rival;
+    kicker.leg-=1.65*kick;kicker.knee*=1-kick;kicker.lean+=.36*kick;
+    hero.back=.2-(left?1.8:.3)*bop;rival.back=.2-(left ? .3 : 1.8)*bop;
+    machine(c,hx,333-(left?21:5)*bop-15*kick,.98,1,beatArmor,hero,false,'');
+    machine(c,ex,333-(left?5:21)*bop,.98,-1,crimson,rival,true,'');
     if(t>5.16)slash(c,t,!won,Math.sin(Math.PI*clamp((t-5.16)/1.19)));
     impactAt(c,t,won,hx,305,ex,304,'#c9fff7');
   }
@@ -609,9 +631,16 @@ const drawBattle = (() => {
     let recoil=0;
     for(const at of strikes)recoil=Math.max(recoil,clamp(1-Math.abs(t-at)/.24));
     const advance=ease(t/1.05),cross=ease((t-3.0)/.5)*(1-ease((t-4)/.55));
-    const hx=85+advance*197+cross*175,ex=409+(won?recoil*16:0),hy=354-37*Math.abs(Math.sin(t*2.65));
+    let swing=0,windup=0;
+    for(const at of strikes){
+      swing=Math.max(swing,Math.sin(Math.PI*clamp((t-at+.12)/.32)));
+      windup=Math.max(windup,Math.sin(Math.PI*clamp((t-at+.46)/.32)));
+    }
+    const facing=cross>.5?-1:1;
+    const hx=85+advance*207+cross*169+facing*(swing*41-windup*19);
+    const ex=409+(won?recoil*21:0),hy=354-37*Math.abs(Math.sin(t*2.65));
     machine(c,ex,310,1.41,-1,crimson,{...brace,lean:-.10+recoil*.13},true,'cannon');
-    machine(c,hx,hy,.77,cross>.5?-1:1,groveArmor,{...flight,arm:-.65-recoil*1.1},false,'blade');
+    machine(c,hx,hy,.77,cross>.5?-1:1,groveArmor,{...flight,arm:-1.6-1.15*windup+2.25*swing,elbow:-1.2+.94*swing,lean:.07+.48*swing,leg:-.3-.78*swing,farLeg:.35+.52*swing},false,'blade');
     for(let i=0;i<18;i++){
       const x=630-(i*67+t*(40+i%4*16))%680,y=116+(i*39+t*28)%344;
       c.save();c.translate(x,y);c.rotate(t+i);
@@ -629,7 +658,13 @@ const drawBattle = (() => {
     if(t>5&&!won)beam(c,ex-63,244,hx,hy-30,'#ff8371',ease((t-5)/.83));
     impactAt(c,t,won,hx,hy-30,ex,268,'#ffd194');
   }
-  const episodes=[orbitSequence,aerialSequence,empSequence,siegeSequence,mirrorShrine,depthFormation,foundryJump,auroraBeat,canyonCombo];
+  const parodies=[mirrorShrine,depthFormation,foundryJump,auroraBeat,canyonCombo];
+  globalThis.drawSpinAction=function(c,location,t){
+    if(!location){drawPatrol(c,t,0);return;}
+    // Rehearse the opening action during ordinary spins; verdicts belong to battle.
+    parodies[location-1](c,t%4.8,false);
+  };
+  const episodes=[orbitSequence,aerialSequence,empSequence,siegeSequence,...parodies];
   return function drawBattle(ctx,elapsed,variant,digits,won) {
     const t=Math.max(0,Number(elapsed)||0); if(t>=6.4)return;
     const cannon=variant===1||/cannon|beam|포격|포탄/i.test(String(variant));
