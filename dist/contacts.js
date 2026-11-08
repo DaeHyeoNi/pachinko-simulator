@@ -3,7 +3,7 @@
 const BALL_DIAMETER = 10;
 function contactLayer(ball) {
   if (ball.launch || ball.route==='warp' || ball.route==='stage') return 0;
-  if (ball.awaitingReceiver) return 2;
+
   return ball.route === 'field' ? 1 : 2;
 }
 

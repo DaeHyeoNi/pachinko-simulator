@@ -2,8 +2,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const flow = fs.readFileSync(path.join(__dirname, '../dist/flow.js'), 'utf8');
-const {springShot, runLaunchGuide, resolveCrownContacts, enterRightReceiver, receiver, fieldGravity} = new Function(
-  flow + '; return {springShot, runLaunchGuide, resolveCrownContacts, enterRightReceiver, receiver, fieldGravity};'
+const {springShot, runLaunchGuide, resolveCrownContacts, receiver} = new Function(
+  flow + '; return {springShot, runLaunchGuide, resolveCrownContacts, receiver};'
 )();
 
 function simulate(strokes, scatter) {
@@ -17,15 +17,8 @@ function simulate(strokes, scatter) {
     for (let i = active.length - 1; i >= 0; i--) {
       const ball = active[i];
       ball.t += 1 / 120;
-      let foul=false;
-      if(ball.launch){
-        foul=runLaunchGuide(ball,1/120);
-      }else{
-        ball.previousX=ball.x;ball.previousY=ball.y;
-        ball.vy+=fieldGravity/120;ball.x+=ball.vx/120;ball.y+=ball.vy/120;
-        enterRightReceiver(ball);
-      }
-      if (foul || (!ball.launch&&!ball.awaitingReceiver)) {
+      const foul=runLaunchGuide(ball,1/120);
+      if (foul || !ball.launch) {
         results.push({route: foul ? 'foul' : ball.route, x: ball.x, y: ball.y, vx:ball.vx});
         active.splice(i, 1);
       }
@@ -46,11 +39,11 @@ for (const scatter of [0, .5, 1]) {
   const releases = [12, 30, 55, 80, 94].map(stroke => simulate([stroke], scatter)[0]);
   assert.ok(releases.every(ball => ball.route === 'field'));
   assert.ok(releases.every((ball, i) => !i || ball.x >= releases[i - 1].x));
-  assert.ok(releases[4].vx > releases[3].vx, 'stronger free shot keeps greater tangential speed');
+  assert.ok(releases[4].x<300, 'sub-threshold shot stalls left of the divider');
   for (const stroke of [95, 100]) {
     const [release] = simulate([stroke], scatter);
     assert.equal(release.route, 'return');
-    assert.ok(release.x>=receiver.x && release.x<receiver.x+5 && release.y<=receiver.clearanceY+3);
+    assert.ok(release.x>570 && Math.abs(release.y-receiver.mouthY)<.01);
   }
   const alternating = Array.from({length: 40}, (_, i) => i % 2 ? 100 : 94);
   const shots = simulate(alternating, scatter);

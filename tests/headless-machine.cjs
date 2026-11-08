@@ -18,7 +18,7 @@ module.exports=function loadMachine(experiment,revision){
   const environment = {
     document:{querySelector:()=>element,getElementById:()=>element,createElement:()=>element,addEventListener:empty},
     BallTray:class {take(){return true;}},RotaryHandle:class {},BanknoteAcceptor:class {},RushSession:class {},
-    Path2D:class {moveTo(){}lineTo(){}ellipse(){}},drawBattle:empty,BallAudio:{pin:empty,wheel:empty,launch:empty},
+    Path2D:class {moveTo(){}lineTo(){}ellipse(){}},drawBattle:empty,drawReelReveal:empty,renderCounter:empty,BallAudio:{pin:empty,wheel:empty,launch:empty},
     requestAnimationFrame:empty
   };
   const build=new Function(...Object.keys(environment),'Math',source+'\nreturn ('+experiment.toString()+');');

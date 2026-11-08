@@ -5,14 +5,14 @@
 const stageDeck={left:188,right:412,center:300,depth:29};
 // The throat is recessed in the front third of the deck. Balls can bridge
 // its flared inlet on a fast pass, or roll past it if another ball occupies it.
-const stageThroat={halfWidth:6,back:15,front:27,maxCrossSpeed:239};
+const stageThroat={halfWidth:7,back:14,front:27,maxCrossSpeed:239};
 const warpMouth={x:94,y:270,halfWidth:8.6};
 const warpPath=[[warpMouth.x,warpMouth.y],[100,279],[106,303],[118,318],[143,339],[165,355],[188,372]];
 const warpLengths=warpPath.slice(1).map(([x,y],i)=>Math.hypot(x-warpPath[i][0],y-warpPath[i][1]));
 const warpLength=warpLengths.reduce((sum,length)=>sum+length,0);
 function deckHeight(x,z){
   const dx=x-stageDeck.center;
-  return 392-dx*dx*.00165+z*.66;
+  return 389-dx*dx*.00145+z*.84;
 }
 function placeInTube(ball){
   let distance=ball.progress;
@@ -139,12 +139,17 @@ function drawStageHardware(c){
   c.beginPath();c.ellipse(x,y,w,4.6,.09,0,Math.PI*2);c.fillStyle='#101c29';c.fill();
   c.strokeStyle='#b1d5df';c.lineWidth=1.8;c.stroke();
   // Both far and near rims are sampled from the actual rolling surface.
-  function rim(z,reverse=false){
+  function rim(z,reverse=false,lift=0){
     for(let i=0;i<=32;i++){
       const x=stageDeck.left+(stageDeck.right-stageDeck.left)*(reverse?1-i/32:i/32);
-      c.lineTo(x,deckHeight(x,z)+5);
+      c.lineTo(x,deckHeight(x,z)+5-lift);
     }
   }
+  c.beginPath();rim(0,false,17);rim(0,true);c.closePath();
+  const wall=c.createLinearGradient(0,362,0,396);
+  wall.addColorStop(0,'#e7ffffaa');wall.addColorStop(.45,'#94cbdf44');wall.addColorStop(1,'#376179bd');
+  c.fillStyle=wall;c.fill();c.strokeStyle='#d6f6ffee';c.lineWidth=1.3;c.stroke();
+  c.beginPath();rim(0,false,14);c.strokeStyle='#efffff72';c.stroke();
   c.beginPath();rim(0);rim(stageDeck.depth,true);c.closePath();
   const resin=c.createLinearGradient(0,372,0,417);
   resin.addColorStop(0,'#c4effb94');resin.addColorStop(.22,'#375f77b5');

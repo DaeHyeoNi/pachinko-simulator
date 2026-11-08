@@ -18,9 +18,10 @@ const field=createFieldwork();
 const pegs=field.pegs;
 const bank=new BanknoteAcceptor();
 const standby=document.createElement('canvas');
-let bonusStartedAt=0;
+let bonusStartedAt=0, roundStartedAt=0, normalSpins=0;
+const firstHitHistory=[];
 standby.width=standby.height=600;
-drawBattle(standby.getContext('2d'),1.05,0,[0,0,0],false);
+drawReelReveal(standby.getContext('2d'),{stage:'short',digits:[4,5,1],elapsed:5,patrolOffset:0},true);
 // One outline drives both collisions and the molded display surround.
 const displayOutline=makeDisplayOutline();
 const bezelBacking=makeBezelBacking(displayOutline);
@@ -31,7 +32,7 @@ const roofEdges=roofCap.slice(1).map((v,i)=>[...roofCap[i],...v]);
 const rails = [...field.rails, ...roofEdges, ...displayOutline.map(([x,y],i)=>{
   const [u,v] = displayOutline[(i+1)%displayOutline.length];
   return [x,y,u,v];
-}),[receiver.x,receiver.clearanceY+7,571,153],
+}),
   ...rightTrough.common.slice(1).map(([x,y,w],i)=>{
     const [startX,startY,startWidth]=rightTrough.common[i];
     return [startX-startWidth,startY,x-w,y];
@@ -81,7 +82,10 @@ function drawDisplay() {
   if(activeDraw) drawReelReveal(g,activeDraw);
   else if(mode==='right'){
     const finished=attacker.round===bonusRounds && !attacker.open && !attacker.inTransit;
-    drawBonusRound(g,now-bonusStartedAt,attacker.round,attacker.hits,rightHits*15,finished,bonusRounds,rush.chain);
+    if(attacker.round===1 && rightHits===0){
+      g.drawImage(standby,0,0);
+      symbolRibbon(g,'우타 ▶',301,76,'#ffde83');
+    } else drawBonusRound(g,now-bonusStartedAt,attacker.round,attacker.hits,rightHits*15,finished,bonusRounds,rush.chain);
   }
   else if(mode==='support') renderSupport(g);
   else g.drawImage(standby,0,0);
@@ -105,10 +109,21 @@ function drawCoveredLaunch(){
   g.globalAlpha=1;
   g.lineWidth=10;g.strokeStyle='#63839824';g.stroke(launchGroove);
   g.lineWidth=1.15;g.strokeStyle='#c1d4d264';g.stroke(launchGlassLip);
-  g.beginPath();g.moveTo(300,crestY+4);
-  g.quadraticCurveTo((300+receiver.x)/2,crestY+4,receiver.x,receiver.clearanceY+7);
-  g.lineWidth=2.5;g.strokeStyle='#364a584f';g.stroke();
-  g.lineWidth=.85;g.strokeStyle='#d5eef48c';g.stroke();
+  g.beginPath();g.ellipse(300,176,284,150,0,-Math.PI/2,sleeveAngle-Math.PI);
+  const guideLit=attacker.open || mode==='support';
+  g.lineWidth=14;g.strokeStyle=guideLit?'#ffb34672':'#7aa7bc52';g.stroke();
+  for(const offset of [-6.5,6.5]){
+    g.beginPath();g.ellipse(300,176,284+offset,150+offset,0,-Math.PI/2,sleeveAngle-Math.PI);
+    g.lineWidth=1.6;g.strokeStyle='#cae9ed';g.stroke();
+  }
+  for(const angle of [-1.38,-1.26,-1.14]){
+    g.save();g.translate(300+284*Math.cos(angle),176+150*Math.sin(angle));
+    g.rotate(Math.atan2(150*Math.cos(angle),-284*Math.sin(angle)));
+    g.beginPath();g.moveTo(-2,-3);g.lineTo(2,0);g.lineTo(-2,3);
+    g.strokeStyle=guideLit?'#fff4ac':'#bdd8d4';g.lineWidth=1.5;g.stroke();g.restore();
+  }
+  g.beginPath();g.moveTo(294,40);g.lineTo(300,32);g.lineTo(309,40);g.closePath();
+  g.fillStyle=attacker.open||mode==='support'?'#ffca63':'#b89962';g.fill();
   g.restore();
 }
 let gatePose=0, supportGatePose=0, lastGateFrame=0;
@@ -119,6 +134,18 @@ function drawChute(){
   g.save();
   g.lineJoin='round';
   g.lineCap='round';
+  // Smoked acrylic mounting plate, with a chamfered inboard edge.
+  g.beginPath();g.moveTo(519,98);g.lineTo(583,149);g.lineTo(598,184);
+  g.lineTo(598,452);g.lineTo(572,506);g.lineTo(489,562);g.lineTo(471,546);
+  g.lineTo(510,489);g.lineTo(521,407);g.lineTo(549,318);g.lineTo(551,193);g.closePath();
+  const plate=g.createLinearGradient(500,0,598,0);
+  plate.addColorStop(0,'#182d3ad9');plate.addColorStop(.34,'#698992c2');
+  plate.addColorStop(.44,'#2a414be6');plate.addColorStop(.76,'#101c29ed');plate.addColorStop(1,'#82999cb3');
+  g.fillStyle=plate;g.fill();g.lineWidth=1.5;g.strokeStyle='#b5ced1';g.stroke();
+  for(const [x,y] of [[551,159],[557,301],[533,407],[509,506]]){
+    circle(x,y,3.3,'#182632');circle(x-.3,y-.5,2.4,'#a1abb0');line(x-1,y+1,x+1,y-1,'#34414b',.8);
+  }
+
   for(const [route,points] of Object.entries(rightTrough)) {
     if(!Array.isArray(points))continue;
     const active=(attacker.open&&['common','lowerCommon','attacker'].includes(route))||
@@ -147,8 +174,7 @@ function drawChute(){
     line(x,y+1,x+2,y-2,mode==='right'?'#f4d9a4':'#a5cbd4',1.6);
   }
   // The clear transfer sleeve marks where a full-strength shot enters the lane.
-  line(receiver.x,receiver.clearanceY+7,571,153,'#16303b',5);
-  line(receiver.x,receiver.clearanceY+7,571,153,'#b8d5d8',2.4);
+
   g.translate(577,139);g.rotate(-.15);
   box(-11,-3,22,6,1.8,'#526872','#d6dfdd');
   g.fillStyle='#152831';g.fillRect(-6,-2,12,4);g.restore();
@@ -199,13 +225,12 @@ drawStageGlass(g);
 drawFieldwork(g,field,now);
 // The launcher inspection window and vertical guide are mounted in front of
 // the metal apron. Incoming balls stay visible all the way from the striker.
-drawCoveredLaunch();
 // Only the opening between the two gold nails accepts a start ball.
 const mouth=field.heso;
 box(mouth.x-15,mouth.y+7,30,13,4,'#302e30','#bb935e');
 line(mouth.x-8,mouth.y+8,mouth.x+8,mouth.y+8,'#080808',4);
 txt('始動',mouth.x,mouth.y+29,'bold 10px serif','#f3cc81');
-drawChute();drawGates();
+drawChute();drawGates();drawCoveredLaunch();
 for(const ball of balls){
   if(ball.launch||ball.route==='warp'||ball.route==='stage')continue;
   tray.drawPlayfieldBall(g,ball);
@@ -217,6 +242,7 @@ function msg(value){$('log').textContent=value}
 function stackCount(){return waiting.length + Number(Boolean(activeDraw))}
 function status(){
   for(const [key,value] of Object.entries({stock,shots,hits,wins})) $(key).textContent=value.toLocaleString();
+  renderCounter(normalSpins,wins,mode==='right'||mode==='support'||activeDraw?.counted?rush.chain:0,firstHitHistory);
   const rightLamps=mode==='support'||(mode==='right'&&rush.chain>1);
   const active=rightLamps?Boolean(supportSpin):Boolean(activeDraw);
   const count=rightLamps?rush.queue.length+Number(active):stackCount();
@@ -266,13 +292,13 @@ function warn(message,duration=1){
 let directionAlert='', directionSince=0;
 function updateWarning(){
   const rightPlay=mode==='right'||(mode==='support'&&supportEndedAt===null);
-  const direction=rightPlay&&force<95?'right':mode==='normal'&&force>=95?'left':'';
+  const direction=rightPlay&&force<95?'right':'';
   if(direction!==directionAlert){directionAlert=direction;directionSince=now;}
   const compact=rightPlay&&(!direction||now-directionSince>=1.65);
   const gateMessage=mode==='support'?'오른쪽 전동 입상구':attacker.open?'어태커 개방':attacker.round===bonusRounds?'어태커 닫힘 · 지급 마무리':'어태커 닫힘 · 다음 개방 대기';
   const value=compact?(direction?'▶ 우타 필요 · 끝까지 돌리세요':'▶ 우타 유지')+'  ·  '+gateMessage:
     direction==='right'?'▶ 우타 필요 · 손잡이를 끝까지 돌리세요':
-    direction==='left'?'◀ 좌타로 돌리세요 · 우타 구슬 반환':now<warningUntil?warningMessage:'';
+    now<warningUntil?warningMessage:'';
   const el=$('warning');
   if(compact!==el.classList.contains('compact'))el.classList.toggle('compact',compact);
   if(value && el.textContent!==value)el.textContent=value;
@@ -290,8 +316,7 @@ function fire(stroke=force){
   if((!stock && striker.loadedAt===null)||!stroke||insertion||mode==='empty'||$('guide').open||!seatBall())return;
   striker.loadedAt=null;
   shots++;lastShot=now;
-  const right=stroke>=95;
-  if(right && mode==='normal')warn('◀ 좌타로 돌리세요 · 구슬 반환');
+
   balls.push(springShot(stroke,rand(),mode==='right'||mode==='support'?'attacker':'return'));
   BallAudio.launch(sound?ac:null);status();
 }
@@ -362,6 +387,7 @@ function forceWinningResult(ticket){
 function startNext(){
   if(activeDraw||mode!=='normal'||!waiting.length)return;
   activeDraw=waiting.shift();
+  normalSpins++;
   if($('alwaysWin').checked)forceWinningResult(activeDraw);
   msg('헤소 추첨 · 도형 변동');
 }
@@ -378,12 +404,18 @@ function advanceBattle(dt){
   if(!activeDraw)return;
   activeDraw.elapsed+=dt;
   const finish=reelStopTime(activeDraw);
-  if(activeDraw.elapsed<finish+drawTiming(activeDraw).hold)return;
+  if(activeDraw.won && !activeDraw.counted && activeDraw.elapsed>=finish){
+    rush.beginFirst($('alwaysWin').checked);
+    firstHitHistory.push(normalSpins);
+    if(firstHitHistory.length>8)firstHitHistory.shift();
+    normalSpins=0;wins++;activeDraw.counted=true;
+    status();
+  }
+  if(activeDraw.elapsed<finish+(activeDraw.won?9:drawTiming(activeDraw).hold))return;
   const result=activeDraw;
   activeDraw=null;
   drawReelReveal(standby.getContext('2d'),result,true);
   if(result.won){
-    rush.beginFirst($('alwaysWin').checked);
     beginBonus(3);
     msg('대당첨! 우타로 어태커를 노리세요.');
   } else {
@@ -392,7 +424,7 @@ function advanceBattle(dt){
   status();
 }
 function beginBonus(rounds){
-  bonusRounds=rounds;wins++;mode='right';rightHits=0;warningUntil=0;bonusStartedAt=now;
+  bonusRounds=rounds;mode='right';rightHits=0;warningUntil=0;bonusStartedAt=now;
   openAttackerRound(1);
 }
 function supportCanAccept(){
@@ -419,10 +451,16 @@ function advanceSupport(){
     startNext();status();return;
   }
   if(supportSpin){
-    if(now-supportSpin.started<(supportSpin.won?3:.6))return;
-    const won=supportSpin.won;supportSpin=null;
+    const age=now-supportSpin.started;
+    if(supportSpin.won && !supportSpin.counted && age>=1.7){
+      rush.renew();wins++;supportSpin.counted=true;status();
+    }
+    if(age<(supportSpin.won?3:.6))return;
+    const won=supportSpin.won;
+    if(won)renderSupport(standby.getContext('2d'));
+    supportSpin=null;
     if(won){
-      rush.renew();beginBonus(10);
+      beginBonus(10);
       msg(rush.chain+'연속 대당첨 · 우타 유지 · 10라운드');return;
     }
     status();
@@ -432,6 +470,7 @@ function advanceSupport(){
   else if(!rush.remaining){supportEndedAt=now;status();}
 }
 function openAttackerRound(round){
+  roundStartedAt=now;
   attacker.round=round;attacker.open=true;attacker.hits=0;
   attacker.transitionAt=now+ROUND_SECONDS;
   status();
@@ -485,10 +524,11 @@ function advanceBall(b,dt){
       msg('약하게 발사된 구슬이 레일을 되돌아와 반환됐습니다.');
       return true;
     }
+    if(!b.launch && b.route==='return')warn('◀ 좌타로 돌리세요 · 반환구로 이동 중',2);
     if(sound)BallAudio.rail(ac,Math.hypot(b.vx,b.vy),b.x);
     return false;
   }
-  b.vy+=510*dt;
+  b.vy+=fieldGravity*dt;
   if(b.route!=='field'){
     b.x+=b.vx*dt;b.y+=b.vy*dt;
     if(!b.crossedSupportGate&&b.y>=rightTrough.supportGateY){
@@ -529,7 +569,7 @@ function advanceBall(b,dt){
 }
 function finishBallStep(b,dt){
   if(!b.freeStep)return false;
-  if(enterRightReceiver(b)){containChute(b);return false}
+
   if(b.route!=='field'){
     const path=rightTrough[b.route];
     if(b.y<path[path.length-1][1])return false;
@@ -583,29 +623,21 @@ function moveWinMechanism(fx){
   if(winCycleStarted===null)winCycleStarted=now;
   const set=(name,value)=>style.setProperty(name,value.toFixed(4));
   if(quietCabinet.matches){
-    set('--win-beat',0);set('--win-phase',0);set('--prop-stroke',.39);set('--prop-wing',.32);set('--prop-tip',.32);
+    set('--win-beat',0);set('--win-phase',0);set('--prop-stroke',0);set('--prop-wing',0);set('--prop-tip',0);
     return;
   }
-  // The motor takes the crest back up more slowly than gravity drops it.
-  // Keep a single cycle across the reel lock and subsequent payout rounds.
-  const phase=((now-winCycleStarted)/2.85)%1;
-  function ramp(from,to){
-    const t=Math.max(0,Math.min(1,(phase-from)/(to-from)));
-    return t*t*(3-2*t);
-  }
-  const impact=.235;
-  let carriage;
-  if(phase<impact){
-    const drop=Math.max(0,(phase-.055)/(impact-.055));
-    carriage=drop*drop;
-  }else{
-    const dt=(phase-impact)*2.85;
-    carriage=(1-.085*Math.exp(-dt*8)*Math.sin(dt*29))*(1-ramp(.46,.78));
-  }
-  const beat=phase<impact?0:Math.exp(-(phase-impact)*23);
-  set('--prop-stroke',carriage);
-  set('--prop-wing',ramp(.035,.245)*(1-ramp(.49,.79)));
-  set('--prop-tip',ramp(.12,.29)*(1-ramp(.45,.71)));
+  const lock=activeDraw ? activeDraw.elapsed-reelStopTime(activeDraw) :
+    supportSpin ? now-supportSpin.started-1.7 : now-roundStartedAt;
+  const opening=fx==='payout', renewal=Boolean(supportSpin);
+  const phase=Math.min(1,Math.max(0,lock/(opening?1.8:9)));
+  const rise=(a,b)=>reelEase((phase-a)/(b-a));
+  const primary=rise(0,.075)*(1-rise(.28,.48));
+  const wings=rise(.54,.66)*(1-rise(.8,.98));
+  const strength=opening ? (attacker.round===1?0:.28) : (renewal ? .76 : 1);
+  const beat=strength*Math.exp(-Math.abs(phase-.075)*48);
+  set('--prop-stroke',strength*(primary+.42*rise(.65,.73)*(1-rise(.78,.96))));
+  set('--prop-wing',strength*(primary+wings));
+  set('--prop-tip',strength*(primary+wings*.88));
   set('--win-phase',phase);
   set('--win-beat',beat);
 }
@@ -628,6 +660,7 @@ $('insert').onclick=insertNote;
 $('chancePush').onclick=()=>{
   if(!chanceIsReady(activeDraw))return;
   activeDraw.pushTime=activeDraw.elapsed;
+  $('chancePush').querySelector('span').animate([{transform:'translateY(0)'},{transform:'translateY(5px) scale(.94)'},{transform:'translateY(0)'}],{duration:320});
   $('chancePush').disabled=true;
   msg('럭키 찬스 · 중앙 숫자를 확인하세요.');
 };

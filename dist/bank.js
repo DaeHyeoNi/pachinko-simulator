@@ -5,16 +5,12 @@
 class BanknoteAcceptor {
   constructor() {
     this.duration = 2.8;
-    this.overlay = document.createElement('div');
-    this.overlay.className = 'cash-reader-preview';
-    this.overlay.hidden = true;
-    this.overlay.setAttribute('aria-hidden','true');
     this.canvas = document.createElement('canvas');
-    this.overlay.append(this.canvas);
-    document.body.append(this.overlay);
+    document.getElementById('readerWindow').append(this.canvas);
     this.ctx = this.canvas.getContext('2d');
     this.paper = this.makeNote();
     this.lastFrame = -1;
+    this.render(-1);
   }
 
   makeNote() {
@@ -79,9 +75,9 @@ class BanknoteAcceptor {
   }
 
   open(){
-    this.lastFrame=-1;this.overlay.hidden=false;this.render(0);
+    this.lastFrame=-1;this.render(0);
   }
-  close(){this.overlay.hidden=true}
+  close(){this.render(-1)}
   render(time){
     const frame=Math.floor(time*60);
     if(frame===this.lastFrame)return;
@@ -127,7 +123,7 @@ class BanknoteAcceptor {
     c.save();c.beginPath();c.rect(42,144,416,191);c.clip();
     c.translate(250+(1-align)*34,0);c.transform(1,(1-align)*-.035,0,1,0,0);
     const tail=(1-feed), projectedLength=181;
-    for(let i=0;i<96;i++){
+    for(let i=0;time>=0 && i<96;i++){
       const u=i/96, v=(i+1)/96;
       const y=noteTop+projectedLength*u;
       const curl=Math.sin(u*Math.PI)*tail;

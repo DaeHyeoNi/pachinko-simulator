@@ -40,18 +40,10 @@ function createFieldwork() {
   nail(heso.x-heso.halfSpacing,heso.y,1.96,-.55);
   nail(heso.x+heso.halfSpacing,heso.y,1.96,.55);
   nail(320,460.8,1.95,.25);
-  // Short right-side banks are interspersed with the independent acrylic
-  // transfer hardware. The lower outside nails disperse misses toward OUT.
-  row(508,144,11,6,4); row(550,181,-9,8,3);
-  row(513,219,9,6,4); row(557,261,-8,9,3); row(509,292,8,7,3);
-  row(514,321,-8,8,4); row(498,366,-8,4,4);
-  row(467,391,-8,4,4); row(425,414,-8,3.4,4);
-  row(379,433,-8,3.1,5);
   row(53,378,-5,11,3); row(74,418,6,9,3);
   row(121,439,-7,9,3); row(159,470,8,4,3);
-  row(209,492,8,3.7,3); row(413,479,-8,5,3);
-  row(457,449,5,9,3); row(353,504,-8,4,3);
-  rails.push([27,340,51,374],[62,446,92,466],[529,421,505,445]);
+  row(209,492,8,3.7,3);
+  rails.push([27,340,51,374],[62,446,92,466]);
   // This single open-ended chain goes up the left wall, around the glass and
   // down the right wall. Its only opening is the bottom drain throat.
   const drain={x:300, y:586, halfWidth:19};

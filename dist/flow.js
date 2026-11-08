@@ -2,21 +2,16 @@
 // the height a ball could climb on the guide before coming to rest.
 const launcher = {startY:533, bendY:176, radiusX:284, radiusY:150, gravity:2600};
 const riseToBend=launcher.startY-launcher.bendY;
-const receiver={x:550,clearanceY:127.4,mouthY:150};
+const receiver={mouthY:150};
 const fieldGravity=510;
 const crestY=launcher.bendY-launcher.radiusY;
-// A ball leaving the crest horizontally must travel this far before it
-// falls to the fixed sleeve. This determines the calibrated spring preload.
-const receiverSpeed=(receiver.x-300)/Math.sqrt(2*(receiver.clearanceY-crestY)/fieldGravity);
-const lipRadius=receiverSpeed**2/fieldGravity;
+// The apex is an over-center divider. The same spring head determines
+// whether the ball stalls on the left or rolls into the right sleeve.
+const sleeveAngle=Math.PI-Math.asin((launcher.bendY-receiver.mouthY)/launcher.radiusY);
 function launchEnergy(stroke,scatter) {
   const variation=(2*scatter-1)*Math.min(3.5,Math.abs(stroke-94.5)*.45,Math.abs(stroke-11.5)*.6);
   if(stroke<11.5)return 80+277*stroke/11.5+variation;
-  if(stroke<=70)return riseToBend+launcher.radiusY*(stroke-11.5)/(94.5-11.5)+variation;
-  const headAt70=launcher.radiusY*(70-11.5)/(94.5-11.5);
-  const headAtCrest=riseToBend+launcher.radiusY;
-  if(stroke<79)return riseToBend+headAt70+(launcher.radiusY-headAt70)*(stroke-70)/9+variation;
-  return headAtCrest+receiverSpeed**2/(2*launcher.gravity)*(stroke-79)/(94.5-79)+variation;
+  return riseToBend+launcher.radiusY*(stroke-11.5)/83+variation;
 }
 
 function springShot(stroke,scatter,rightRoute) {
@@ -75,27 +70,17 @@ function runLaunchGuide(ball,dt) {
   const arcTime=Math.min(dt,ball.t-ball.bendTime);
   const height=ball.head-riseToBend;
   const crest=height>=launcher.radiusY;
-  const exit=crest ? Math.PI/2 : Math.asin(height/launcher.radiusY);
+  const exit=crest ? sleeveAngle : Math.asin(height/launcher.radiusY);
   const sin=Math.sin(ball.angle),cos=Math.cos(ball.angle);
   const speed=Math.sqrt(2*gravity*Math.max(0,height-launcher.radiusY*sin));
   const tangentLength=Math.hypot(launcher.radiusX*sin,launcher.radiusY*cos);
   placeOnCrown(ball,Math.min(exit,ball.angle+speed*arcTime/tangentLength));
   if(ball.angle>=exit){
     ball.launch=false;
-    // At the crown a fast ball keeps positive pressure against the curved
-    // outer lip. A slower one drops under it into the open playfield.
-    // Both leave with their actual position and tangent velocity.
-    ball.awaitingReceiver=crest && ball.vx**2/lipRadius>=fieldGravity;
+    if(crest){
+      ball.route=ball.rightRoute;
+      ball.vx*=.45;ball.vy*=.45;
+    }
   }
   return false;
-}
-
-function enterRightReceiver(ball){
-  if(!ball.awaitingReceiver||ball.previousX>=receiver.x||ball.x<receiver.x)return false;
-  ball.awaitingReceiver=false;
-  const fraction=(receiver.x-ball.previousX)/(ball.x-ball.previousX);
-  const crossingY=ball.previousY+(ball.y-ball.previousY)*fraction;
-  if(crossingY>receiver.clearanceY)return false;
-  ball.route=ball.rightRoute;
-  return true;
 }

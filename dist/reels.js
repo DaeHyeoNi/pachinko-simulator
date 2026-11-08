@@ -2,7 +2,7 @@
 
 const reelTiming = {
   leftStop: 3.6, rightStop: 5.8, pushDeadline: 9.65,
-  normalStop: 13.6, luckyRun: 5.6, hold: 3.5
+  normalStop: 10.0, luckyRun: 4.0, hold: 3.5
 };
 
 const shortTiming = {leftStop:1.7, rightStop:2.5, normalStop:3.65, hold:.85};
@@ -73,16 +73,17 @@ function drawSpinningSymbol(c, ticket, index, x, y, size, finish) {
   c.translate(x,y); c.scale(pop,pop);
   c.beginPath(); c.rect(-size*.69,-size*.58,size*1.38,size*1.16); c.clip();
   function print(value, offset) {
-    c.save(); c.translate(0,offset);
+    c.save(); c.translate(0,offset); c.rotate((index-1)*.095+(Number.isInteger(value)?value%3-1:0)*.035);
     const win = ticket.won && t >= finish;
     const palette = win ? ['#fff6cb','#ffd34d','#ff653c','#bd2559','#ffe7a0'] :
-      value === 7 ? ['#fff1cb','#ffbd6b','#fb5735','#a41a2c','#fff3ad'] :
+      value === 7 || value === 5 ? ['#fff1cb','#ffbd6b','#fb5735','#a41a2c','#fff3ad'] :
       value % 2 === 0 ? ['#f4ffff','#b9f1ff','#529de3','#303c93','#b8fbff'] :
       ['#fffbd7','#ffe59b','#ffc35d','#a64c21','#ffe7a2'];
     const ink = c.createLinearGradient(0,-size*.43,0,size*.43);
     [0,.32,.48,.53,1].forEach((at,i)=>ink.addColorStop(at,palette[i]));
-    c.font='italic 900 '+size+'px Georgia,serif'; c.textAlign='center'; c.textBaseline='middle';
-    c.lineJoin='round'; c.strokeStyle='#0c0c19'; c.lineWidth=size*.12;
+    const face=value===4||value===7?'Arial Black, sans-serif':'Georgia, serif';
+    c.font='italic 900 '+size+'px '+face; c.textAlign='center'; c.textBaseline='middle';
+    c.lineJoin='round'; c.strokeStyle='#0c0c19'; c.lineWidth=size*(value%2 ? .13 : .10);
     c.strokeText(value,-size*.035,size*.069);
     c.strokeStyle=palette[1]; c.lineWidth=size*.066; c.strokeText(value,-size*.035,size*.028);
     c.strokeStyle='#552c36'; c.lineWidth=size*.035; c.strokeText(value,-size*.035,size*.028);
@@ -92,7 +93,7 @@ function drawSpinningSymbol(c, ticket, index, x, y, size, finish) {
   if (index === 1 && chanceIsReady(ticket)) {
     print('×',0);
   } else {
-    const alternate = index===1 && ticket.lucky && ticket.pushTime!=null;
+    const alternate = index===1 && ticket.lucky && t>=timing.rightStop;
     const phase = alternate ? 1.1*remaining+1.45*remaining*remaining :
       remaining<1.8 ? 1.15*remaining*remaining : 3.726+(remaining-1.8)*4.14;
     const step=Math.floor(phase), offset=(phase-step)*size*1.16;
@@ -119,8 +120,8 @@ function drawReelReveal(c,ticket,retained=false) {
     const reach = isReachLive(ticket);
     const travel=timing===normalReachTiming ? reelEase((t-timing.rightStop)/.6)*(1-reelEase((t-finish+.8)/.8)) : 0;
     for(let i=0;i<3;i++){
-      const distance=134+travel*40, y=i===1 ? 385-travel*32 : 385;
-      drawSpinningSymbol(c,ticket,i,300+(i-1)*distance,y,i===1 ? 112+travel*22 : 112,finish);
+      const distance=134+travel*40, y=360+(i-1)*29-travel*(i===1?55:8)+Math.sin(t*1.6+i)*9;
+      drawSpinningSymbol(c,ticket,i,300+(i-1)*distance,y,i===1 ? 144+travel*18 : i===0?119:134,finish);
     }
     if(reach)symbolRibbon(c,'리치',145,30,'#ffdf9e',1-reelEase((t-timing.rightStop-1.3)/.7));
     c.restore();return;
@@ -134,7 +135,7 @@ function drawReelReveal(c,ticket,retained=false) {
   const sideSize = 112 - spread*20 + converge*66;
   const centerSize = 112 - spread*40 + reelEase((t-reelTiming.rightStop)/1.2)*21 + converge*65;
   drawSpinningSymbol(c,ticket,0,300-sideDistance,sideY,sideSize,finish);
-  drawSpinningSymbol(c,ticket,2,300+sideDistance,sideY,sideSize,finish);
+  drawSpinningSymbol(c,ticket,2,300+sideDistance,sideY+14*(1-converge),sideSize*1.08,finish);
   drawSpinningSymbol(c,ticket,1,300,centerY,centerSize,finish);
   if (isReachLive(ticket)) {
     const age=t-reelTiming.rightStop;
@@ -154,7 +155,7 @@ function drawReelReveal(c,ticket,retained=false) {
   }
   if(t>=finish && !retained && ticket.won){
     symbolRibbon(c,'대당첨',427,37,'#fff0aa',reelEase((t-finish)/.18));
-    if(t>=finish+1.75) drawJackpotAward(c,t-finish-1.75);
+    if(t>=finish+2.5 && t<finish+7) drawJackpotAward(c,t-finish-2.5);
   }
   c.restore();
 }
