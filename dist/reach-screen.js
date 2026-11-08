@@ -1,26 +1,19 @@
 'use strict';
 const quietScenes=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
-function drawNormalScene(c,t,offset){
-  const age=t+offset,phase=age%15;
-  if(!patrolPlate.naturalWidth){drawPatrol(c,t,offset);return;}
+function drawNormalScene(c,time){
+  // Use the cabinet clock so reserve starts cannot restart the close-up.
+  const phase=time%48,location=Math.floor(phase/8),local=phase%8;
   const still=quietScenes?.matches;
-  const travel=still?0:Math.sin(age*.46);
-  const zoom=1.04+(still?0:.045*(1+Math.sin(age*.64)));
-  c.save();c.translate(300+travel*8,296+travel*4);c.scale(zoom,zoom);
-  c.drawImage(patrolPlate,-300,-300,600,600);c.restore();
-  if(still)return;
-  // Cross from the close camera to the two flying patrol units and back.
-  const wide=reelEase((phase-6.5)/1.1)*(1-reelEase((phase-10.9)/1.3));
-  if(wide>0){c.save();c.globalAlpha=wide;drawPatrol(c,t,offset);c.restore();}
-  c.save();c.lineCap='round';
-  for(let i=0;i<20;i++){
-    const u=(age*(.10+(i%4)*.016)+i*.161)%1;
-    const x=(i*131+u*78)%620,y=525-u*430;
-    c.globalAlpha=Math.sin(Math.PI*u)*(.35+(i%3)*.16);
-    c.strokeStyle=i%3?'#ffb44e':'#fff8bc';c.lineWidth=i%4===0?2.6:1.3;
-    c.beginPath();c.moveTo(x,y);c.lineTo(x-1.2,y+2+i%4);c.stroke();
+  const camera=still?location*8+2:time;
+  drawAmbientPatrol(c,location,camera);
+  if(local>7.4 && !still){
+    c.save();c.globalAlpha=reelEase((local-7.4)/.6);
+    drawAmbientPatrol(c,(location+1)%6,camera);c.restore();
   }
-  c.restore();
+  if(phase<45 || phase>=47 || !patrolPlate.naturalWidth)return;
+  c.save();
+  c.globalAlpha=reelEase((phase-45)/.35)*(1-reelEase((phase-46.55)/.45));
+  c.drawImage(patrolPlate,-11,-11,622,622);c.restore();
 }
 function drawTargetLock(c,t){
   const close=reelEase(t/.75),x=300+38*(1-close),y=249;

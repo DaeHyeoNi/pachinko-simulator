@@ -32,7 +32,7 @@ const standby=document.createElement('canvas');
 let bonusStartedAt=0, roundStartedAt=0, normalSpins=0;
 const firstHitHistory=[];
 standby.width=standby.height=600;
-const idleTicket={stage:'short',digits:[4,5,1],elapsed:5,patrolOffset:0};
+const idleTicket={stage:'short',digits:[4,5,1],elapsed:5};
 drawReelReveal(standby.getContext('2d'),idleTicket,true);
 // One outline drives both collisions and the molded display surround.
 const displayOutline=makeDisplayOutline();
@@ -63,7 +63,7 @@ function drawDisplay() {
   g.clip();
   // Cover the full gasket even at the two raised corners of the title molding.
   g.translate(299,141);g.scale(.70,.63);g.translate(-300,-300);
-  if(activeDraw) drawReelReveal(g,activeDraw);
+  if(activeDraw) drawReelReveal(g,activeDraw,false,now);
   else if(mode==='right'){
     const finished=attacker.round===bonusRounds && !attacker.open && !attacker.inTransit;
     if(attacker.round===1 && rightHits===0){
@@ -74,7 +74,7 @@ function drawDisplay() {
   else if(mode==='support') renderSupport(g);
   else if(mode==='empty'||mode==='normal'){
     idleTicket.elapsed=5+now;
-    drawReelReveal(g,idleTicket,true);
+    drawReelReveal(g,idleTicket,true,now);
   } else g.drawImage(standby,0,0);
   drawScreenCount(g,displayStock(),mode==='right'||mode==='support'||activeDraw?.counted?rush.chain:0,now);
   g.restore();
@@ -356,7 +356,7 @@ function drawTicket(){
   const matchingSides = first===third;
   const stage = won || lucky || (matchingSides && rand()<.38) ? 'battle' : matchingSides ? 'reach' : 'short';
   return {won,lucky,reachVariant:Math.floor(rand()*3),digits:lucky?[7,won?7:6,7]:[first,second,third],stage,
-    variant:stage==='battle'?nextBattleScene():null,patrolOffset:rand()*18,elapsed:0,pushTime:null};
+    variant:stage==='battle'?nextBattleScene():null,elapsed:0,pushTime:null};
 }
 function forceWinningResult(ticket){
   if(!ticket||ticket.won)return;
@@ -397,7 +397,7 @@ function advanceBattle(dt){
   const result=activeDraw;
   idleTicket.digits=[...result.digits];
   activeDraw=null;
-  drawReelReveal(standby.getContext('2d'),result,true);
+  drawReelReveal(standby.getContext('2d'),result,true,now);
   if(result.won){
     beginBonus(3);
     msg('대당첨! 우타로 어태커를 노리세요.');

@@ -51,7 +51,15 @@ const drawBattle = (() => {
     part(c,'M-15 18L-9 25L-7 40L-12 34Z',p.dark);
     segment(c,7,15,3,21,p.trim,2);segment(c,3,24,1,37,p.trim);
     part(c, enemy?'M-8 46L7 46L12 52L31 58L19 61L4 58L-12 60Z':'M-8 46L8 46L12 52L24 55L28 60L-11 60L-14 57Z',p.dark,p.ink,1.5);
-    part(c,'M-3 48L6 48L12 54L20 55L23 57L1 55Z',p.shell);c.restore();
+    part(c,'M-3 48L6 48L12 54L20 55L23 57L1 55Z',p.shell);
+    if(p.kit==='jump'){
+      part(c,'M-14 43L7 42L14 50L29 52L32 61L-15 61Z',p.shell,p.ink,2);
+      segment(c,-13,63,30,63,'#df9a33',4);segment(c,-10,58,26,58,p.mid,2);
+    }else if(p.kit==='beat'){
+      segment(c,-7,59,-7,65,p.trim,3);segment(c,15,59,15,65,p.trim,3);
+      part(c,'M-17 63Q4 68 29 60Q26 69 -14 69Z','#e2ffff',p.ink,1.5);
+    }
+    c.restore();
   }
   function arm(c,p,x,y,angle,elbow,weapon) {
     c.save();c.translate(x,y);c.rotate(angle);joint(c,0,0,12,p);
@@ -101,6 +109,10 @@ const drawBattle = (() => {
   function machine(c,x,y,size,dir,p,pose,enemy,weapon) {
     c.save();c.translate(x,y);c.scale(size*dir,size);c.rotate(pose.lean||0);
     wing(c,p,enemy);
+    if(p.kit==='dive'){
+      part(c,'M-44 -83Q-58 -86 -61 -70L-53 -31L-36 -28L-32 -40Z',p.mid,p.ink,2);
+      segment(c,-57,-61,-38,-64,p.trim,4);circle(c,-48,-34,7,p.ink);circle(c,-48,-34,4,p.eye);
+    }
     arm(c,p,-24,-52,pose.back||.1,.35,'');
     leg(c,p,-11,12,pose.farLeg||.26,-.14,enemy);
     leg(c,p,12,16,pose.leg||-.20,pose.knee||.20,enemy);
@@ -122,6 +134,12 @@ const drawBattle = (() => {
     part(c,'M8 -11L27 -4L24 4L11 6L2 1Z',p.mid);
     segment(c,13,0,23,-1,p.trim,2);c.restore();
     arm(c,p,23,-41,pose.arm,pose.elbow,weapon);
+    if(p.kit==='grove'){
+      part(c,'M-24 -62L-1 -52L24 -61L12 -39L-4 -46L-36 -17L-28 -43L-44 -41Z','#34754f',p.ink,2);
+      circle(c,-2,-51,4,p.trim);
+    }else if(p.kit==='prism'){
+      part(c,'M-13 -53L0 -63L13 -53L0 -37Z','#67f2c7',p.trim,3);
+    }
     head(c,p,enemy,pose.head||0);c.restore();
   }
   function landscape(c,t,cannon) {
@@ -316,11 +334,11 @@ const drawBattle = (() => {
     }
     if(t>5.18)blast(c,won?stationX+8:mx,won?stationY:my-39,t,Math.sin(clamp((t-5.18)/1.28)*Math.PI)*1.65,'#ff9358');
   }
-  function flyingUnit(c,x,y,s,dir,enemy,bank,t) {
+  function flyingUnit(c,x,y,s,dir,enemy,bank,t,palette=enemy?crimson:ivory) {
     c.save();c.translate(x,y);c.rotate(bank);
     const exhaust=29+Math.sin(t*17)*5;
     for(let i=0;i<2;i++)beam(c,-dir*(22+i*8)*s,(-22+i*16)*s,-dir*(exhaust+39+i*8)*s,(-21+i*18)*s,enemy?'#ff8a6c':'#93faff',.51);
-    machine(c,0,0,s,dir,enemy?crimson:ivory,flight,enemy,'blade');c.restore();
+    machine(c,0,0,s,dir,palette,flight,enemy,'blade');c.restore();
   }
   // The base stage keeps the pilots on patrol while the three symbols vary.
   globalThis.drawPatrol = function drawPatrol(c,t,stageOffset=0) {
@@ -449,14 +467,33 @@ const drawBattle = (() => {
     if(t>5.10){let f=Math.sin(clamp((t-5.10)/1.34)*Math.PI);
       blast(c,won?x-24:ax,won?y-24:ay-35,t,f*1.42,'#ffab56');}
   }
+  const prismArmor={...ivory,kit:'prism',mid:'#537f72',trim:'#f5c565'};
+  const diveArmor={...ivory,kit:'dive',mid:'#34638a',trim:'#88ffe2',eye:'#a6ffff'};
+  const jumpArmor={...ivory,kit:'jump',shell:'#f6db98',mid:'#a65539',trim:'#ffc655'};
+  const beatArmor={...ivory,kit:'beat',shell:'#fff1c5',mid:'#4b9ca7',trim:'#ed6082'};
+  const groveArmor={...ivory,kit:'grove',mid:'#997860',trim:'#ffc35c'};
   const stagePlates=['shrine','trench','foundry','aurora','canyon'].map(name=>{
-    const image=new Image();image.src=name+'.webp';return image;
+    const image=new Image();image.src=name+'.webp?v=24';return image;
   });
   function stagePlate(c,index,t){
     const plate=stagePlates[index],pan=6*Math.sin(t*.72);
     if(plate.naturalWidth)c.drawImage(plate,-17+pan,-15,634,634);
     else landscape(c,t,false);
   }
+  // The normal rotation visits different locations without playing their combat cues.
+  globalThis.drawAmbientPatrol=function(c,location,t){
+    if(location===0){drawPatrol(c,t,0);return;}
+    const index=location-1;
+    stagePlate(c,index,t);
+    if(index===1){
+      flyingUnit(c,210+54*Math.sin(t*.33),306+19*Math.sin(t*.84),1.13,1,false,.07,t,diveArmor);
+    }else{
+      const armor=[prismArmor,diveArmor,jumpArmor,beatArmor,groveArmor][index];
+      const foot=[440,0,457,445,437][index],x=230+46*Math.sin(t*.29);
+      const sway=Math.sin(t*.95);
+      machine(c,x,foot-98+2*sway,1.03,1,armor,{...brace,lean:.03*sway,head:.09*sway,arm:-.9+sway*.12},false,index===0||index===4?'blade':'');
+    }
+  };
   function impactAt(c,t,won,hx,hy,ex,ey,ink){
     const intensity=Math.max(0,1-Math.abs(t-5.83)/.40);
     blast(c,won?ex:hx,won?ey:hy,t,intensity,ink);
@@ -466,7 +503,7 @@ const drawBattle = (() => {
     stagePlate(c,0,t);
     const hx=170,ex=452,hy=353,ey=326,px=306,py=185+7*Math.sin(t*2);
     machine(c,ex,ey,1.03,-1,crimson,brace,true,'cannon');
-    machine(c,hx,hy,1.13,1,ivory,{...brace,arm:-1.1-ease((t-2)/.6)*.45},false,'blade');
+    machine(c,hx,hy,1.13,1,prismArmor,{...brace,arm:-1.1-ease((t-2)/.6)*.45},false,'blade');
     c.save();c.translate(px,py);c.scale(.4+.6*Math.abs(Math.cos(t*1.3)),1);
     part(c,'M0 -36L21 0L0 34L-21 0Z','#78e4c9','#f6ffe7',3);
     part(c,'M0 -30L0 24L-14 1Z','#2b928d');c.restore();
@@ -498,7 +535,7 @@ const drawBattle = (() => {
       if(u>0&&u<1)rocket(c,ex-22-u*427,ey+i*21+u*90,2.94,.55,t+i);
     }
     flyingUnit(c,ex,ey,.88,-1,true,-.16,t);
-    flyingUnit(c,hx,hy,1.03,1,false,Math.sin(t*2)*.2,t);
+    flyingUnit(c,hx,hy,1.03,1,false,Math.sin(t*2)*.2,t,diveArmor);
     if(t>4.8){const u=ease((t-4.8)/1.03),x=hx+(ex-hx)*u,y=hy-46+(ey-hy)*u;
       if(won)rocket(c,x,y,-.27,.82,t);else rocket(c,ex+(hx-ex)*u,ey-46+(hy-ey)*u,2.8,.82,t);}
     impactAt(c,t,won,hx,hy-46,ex,ey-46,'#89f7ff');
@@ -535,7 +572,7 @@ const drawBattle = (() => {
     }
     const ex=xs[3],ey=ys[3]-65,land=ease((t-5.64)/.19);
     machine(c,ex,ey+(won?12*land:0),.84,-1,crimson,brace,true,'');
-    machine(c,hx,foot-69-(won?42*land:0),.90,1,ivory,{...brace,knee:.45+air,leg:-.4-air*.5,arm:-.6-air},false,'');
+    machine(c,hx,foot-69-(won?42*land:0),.90,1,jumpArmor,{...brace,knee:.45+air,leg:-.4-air*.5,arm:-.6-air},false,'');
     impactAt(c,t,won,hx,foot-54,ex,ey-18,'#ffe997');
   }
   // Alternating two-count poses, then an answering syncopated kick on the ice.
@@ -560,7 +597,7 @@ const drawBattle = (() => {
       c.save();c.translate(x,416);c.scale(1,.23);
       ring(c,0,0,52+phase*28,active?'#abfff2':'#b693ff',active?5:2);c.restore();
     }
-    machine(c,hx,333-(left?21:5)*bop,.98,1,ivory,dance(left,1),false,'');
+    machine(c,hx,333-(left?21:5)*bop,.98,1,beatArmor,dance(left,1),false,'');
     machine(c,ex,333-(left?5:21)*bop,.98,-1,crimson,dance(!left,-1),true,'');
     if(t>5.16)slash(c,t,!won,Math.sin(Math.PI*clamp((t-5.16)/1.19)));
     impactAt(c,t,won,hx,305,ex,304,'#c9fff7');
@@ -574,7 +611,7 @@ const drawBattle = (() => {
     const advance=ease(t/1.05),cross=ease((t-3.0)/.5)*(1-ease((t-4)/.55));
     const hx=85+advance*197+cross*175,ex=409+(won?recoil*16:0),hy=354-37*Math.abs(Math.sin(t*2.65));
     machine(c,ex,310,1.41,-1,crimson,{...brace,lean:-.10+recoil*.13},true,'cannon');
-    machine(c,hx,hy,.77,cross>.5?-1:1,ivory,{...flight,arm:-.65-recoil*1.1},false,'blade');
+    machine(c,hx,hy,.77,cross>.5?-1:1,groveArmor,{...flight,arm:-.65-recoil*1.1},false,'blade');
     for(let i=0;i<18;i++){
       const x=630-(i*67+t*(40+i%4*16))%680,y=116+(i*39+t*28)%344;
       c.save();c.translate(x,y);c.rotate(t+i);

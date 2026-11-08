@@ -110,7 +110,7 @@ function drawSpinningSymbol(c, ticket, index, x, y, size, finish) {
   c.restore();
 }
 
-function drawReelReveal(c,ticket,retained=false) {
+function drawReelReveal(c,ticket,retained=false,sceneTime=ticket.elapsed) {
   const t=ticket.elapsed, finish=reelStopTime(ticket);
   c.save();
   const timing=drawTiming(ticket);
@@ -120,7 +120,7 @@ function drawReelReveal(c,ticket,retained=false) {
     const flash=1-reelEase((t-timing.leftStop)/.36);
     if(flash>0){c.fillStyle='rgba(218,242,255,'+flash*.72+')';c.fillRect(0,0,600,600);}
   } else {
-    drawNormalScene(c,t,ticket.patrolOffset||0);
+    drawNormalScene(c,sceneTime);
   }
   if(isReachLive(ticket))drawReachScene(c,ticket.reachVariant,t-timing.rightStop,finish-t);
   if(!inBattle){
